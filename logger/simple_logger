@@ -17,6 +17,7 @@ call_name=$0
 cmd=$1
 
 
+echo $0
 case $call_name in
 	*DNF)
 		log_file=~/.philconfig/DNFADD.txt
@@ -28,11 +29,18 @@ case $call_name in
 		;;
 esac
 
+datestamp(){
+	date +'%a %b %d %G'
+}
 
 
-echo "================================================================================" >> DNFADD.txt
-echo "========================== $(date) =========================" >> DNFADD.txt
-echo "================================================================================" >> DNFADD.txt
+if ! grep "$(datestamp)" DNFADD.txt > /dev/null ; then
+	echo "================================================================================" >> DNFADD.txt
+	echo "================================ $(datestamp) ===============================" >> DNFADD.txt
+	echo "================================================================================" >> DNFADD.txt
+fi
+
+
 echo $cmd $@ >> DNFADD.txt
 eval $cmd $@
 echo -n "any comments [y/n] ? : "
@@ -40,6 +48,7 @@ read answer
 if [[ "$answer" == y ]] ; then
 	echo -n "$(tput setaf 5) >>> $(tput sgr 0)"
 	echo "==================================== COMMENTS ==================================" >> DNFADD.txt
-	cat | sed 's/^/>>>> /g' >>  DNFADD.txt
+	cat | sed 's/^/   > /g' >>  DNFADD.txt
+	echo ""
 fi
 
