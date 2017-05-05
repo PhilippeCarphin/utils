@@ -1,0 +1,1 @@
+../misc/set_file_watch.sh
