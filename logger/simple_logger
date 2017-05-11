@@ -19,9 +19,9 @@ cmd=$1
 
 echo $0
 case $call_name in
-	*DNF)
+	*log_dnf)
 		log_file=~/.philconfig/DNFADD.txt
-		cmd=dnf
+		cmd="sudo dnf"
 		;;
 	*BREW)
 		log_file=~/.philconfig/BREW.txt
@@ -34,21 +34,21 @@ datestamp(){
 }
 
 
-if ! grep "$(datestamp)" DNFADD.txt > /dev/null ; then
-	echo "================================================================================" >> DNFADD.txt
-	echo "================================ $(datestamp) ===============================" >> DNFADD.txt
-	echo "================================================================================" >> DNFADD.txt
+if ! grep "$(datestamp)" $log_file > /dev/null ; then
+	echo "================================================================================" >> $log_file
+	echo "================================ $(datestamp) ===============================" >> $log_file
+	echo "================================================================================" >> $log_file
 fi
 
 
-echo $cmd $@ >> DNFADD.txt
+echo $cmd $@ >> $log_file
 eval $cmd $@
 echo -n "any comments [y/n] ? : "
 read answer
 if [[ "$answer" == y ]] ; then
 	echo -n "$(tput setaf 5) >>> $(tput sgr 0)"
-	echo "==================================== COMMENTS ==================================" >> DNFADD.txt
-	cat | sed 's/^/   > /g' >>  DNFADD.txt
+	echo "==================================== COMMENTS ==================================" >> $log_file
+	cat | sed 's/^/   > /g' >>  $log_file
 	echo ""
 fi
 
