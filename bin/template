@@ -1,0 +1,74 @@
+#!/bin/bash
+
+src=""
+dst=""
+cmd=$1
+shift
+
+TEMPLATES_DIR=~/.templates
+
+do_command()
+{
+	if [[ $cmd == "add" ]] ; then
+		add_command
+	elif [[ $cmd == "use" ]] ; then
+		use_command
+	elif [[ $cmd == "show" ]] ; then
+		show_command
+	fi
+}
+
+show_command()
+{
+	ls $TEMPLATES_DIR
+}
+
+add_command()
+{
+	if [ -e $TEMPLATES_DIR/$dst ] ; then
+		echo "Destination $dst already exists"
+		return
+	fi
+
+	if [[  "$dst" == "" ]] ; then
+		dst = $src
+	fi
+
+	echo ADDING
+	cp -R $src $TEMPLATES_DIR/$dst
+}
+
+use_command()
+{
+	if [ -e $dst ] ; then
+		echo "Destination $dst already exists"
+		return
+	fi
+
+	if [[ "$dst" == "" ]] ; then
+		dst = $src
+	fi
+	cp -R $TEMPLATES_DIR/$src $dst
+}
+
+while [[ $# -gt 1 ]]
+do
+	option=$1
+	optarg=$2
+	case $option in
+		-s|--src)
+			src=$optarg
+			shift
+			;;
+		-d|--dst)
+			dst=$optarg
+			shift
+			;;
+		*)
+			echo "unknown option $option"
+	esac
+	shift
+done
+
+
+do_command
