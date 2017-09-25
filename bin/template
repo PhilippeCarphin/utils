@@ -5,7 +5,7 @@ dst=""
 cmd=$1
 shift
 
-TEMPLATES_DIR=~/.templates
+TEMPLATES_DIR=~/Templates
 
 do_command()
 {
