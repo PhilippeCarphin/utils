@@ -19,9 +19,13 @@ cmd=$1
 
 echo $0
 case $call_name in
+<<<<<<< HEAD
 	*DNF|*dnf)
+=======
+	*log_dnf)
+>>>>>>> c3ed2a0f7ba926a913b409ac387c863d4fbc01ec
 		log_file=~/.philconfig/DNFADD.txt
-		cmd=dnf
+		cmd="sudo dnf"
 		;;
 	*LOG_BREW|*log_brew)
 		log_file=~/.philconfig/BREW.txt
@@ -40,14 +44,24 @@ if ! grep "$(datestamp)" $log_file > /dev/null ; then
 	echo "================================================================================" >> $log_file
 fi
 
+<<<<<<< HEAD
 echo $cmd $@ >> $log_file
 eval $cmd $@ 
+=======
+
+echo $cmd $@ >> $log_file
+eval $cmd $@
+>>>>>>> c3ed2a0f7ba926a913b409ac387c863d4fbc01ec
 echo -n "any comments [y/n] ? : "
 read answer
 if [[ "$answer" == y ]] ; then
 	echo -n "$(tput setaf 5) >>> $(tput sgr 0)"
 	echo "==================================== COMMENTS ==================================" >> $log_file
+<<<<<<< HEAD
 	cat | sed 's/^/   > /g' >> $log_file
+=======
+	cat | sed 's/^/   > /g' >>  $log_file
+>>>>>>> c3ed2a0f7ba926a913b409ac387c863d4fbc01ec
 	echo ""
 fi
 
