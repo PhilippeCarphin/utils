@@ -15,24 +15,32 @@ do_command()
 		use_command
 	elif [[ $cmd == "show" ]] ; then
 		show_command
+	elif [[ $cmd == "show" ]] ; then
+		show_command
 	fi
 }
 
+
 show_command()
 {
-	ls $TEMPLATES_DIR
+	if [[ $(uname) == Darwin ]] ; then
+		open $TEMPLATES_DIR/$src
+	else
+		gvfs-open $TEMPLATES_DIR/$src
+	fi
 }
 
 add_command()
 {
+	if [[  "$dst" == "" ]] ; then
+		dst=$src
+	fi
+
 	if [ -e $TEMPLATES_DIR/$dst ] ; then
 		echo "Destination $dst already exists"
 		return
 	fi
 
-	if [[  "$dst" == "" ]] ; then
-		dst = $src
-	fi
 
 	echo ADDING
 	cp -R $src $TEMPLATES_DIR/$dst
@@ -40,14 +48,15 @@ add_command()
 
 use_command()
 {
+	if [[ "$dst" == "" ]] ; then
+		dst=$src
+	fi
+
 	if [ -e $dst ] ; then
 		echo "Destination $dst already exists"
 		return
 	fi
 
-	if [[ "$dst" == "" ]] ; then
-		dst = $src
-	fi
 	cp -R $TEMPLATES_DIR/$src $dst
 }
 
