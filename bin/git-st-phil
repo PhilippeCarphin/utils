@@ -1,9 +1,16 @@
+#!/bin/bash
 pushd $1
 for d in $(ls) ; do
-	pushd $d > /dev/null
-	echo "$(tput setab 2)Directory $d$(tput sgr 0)"
-	git fetch
-	git st
+	if [ -d $d ] ; then
+		pushd $d > /dev/null
+		echo "$(tput setab 2)Directory $d$(tput sgr 0)"
+		git fetch
+		git st
+		popd > /dev/null
+	else
+		echo "$(tput setab 5)File $d is not a directory$(tput sgr 0)"
+	fi
+	echo -n "Press any key to continue ..."
 	read
-	popd > /dev/null
+	echo ""
 done
