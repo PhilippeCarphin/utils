@@ -2,6 +2,6 @@
 if [[ "$1" == "" ]] ; then
 	cat ~/.todo.txt
 else
-	echo "$(date): $1" >> ~/.todo.txt
+	echo "$(date): $1" >> ~/Dropbox/.todo.txt
 fi
 
