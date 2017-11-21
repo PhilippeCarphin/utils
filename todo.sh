@@ -1,7 +1,8 @@
 #!/bin/bash
+TODO_FILE=~/Dropbox/todo.txt
 if [[ "$1" == "" ]] ; then
-	cat ~/.todo.txt
+	cat $TODO_FILE
 else
-	echo "$(date): $1" >> ~/Dropbox/.todo.txt
+	echo "$(date): $1" >> $TODO_FILE
 fi
 
