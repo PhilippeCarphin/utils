@@ -1,12 +1,13 @@
 SOURCE = $(wildcard *.c)
 EXEC = $(SOURCE:.c=.out)
-TEST_ARGS = \"Tasdf asdfasdf asdf asdf asdf asd fsad fas df asdf as df asdf asd fa sdf asd fas df asdf as df asd fas df as df asdf sad fsad\" 15
-PROJ_COMPILER = $(CC)
+TEST_STRING = "This is a string that needs to be wrapped, it has a_really_long_word_that_is_too_big for one line"
+WRAP_LENGTH = 15
+TEST_ARGS = $(TEST_STRING) $(WRAP_LENGTH)
 
-all:
+all:$(EXEC)
 
 $(EXEC):$(SOURCE)
-	$(PROJ_COMPILER) $^ -o $@
+	gcc $^ -o $@
 
 .PHONY:test vars
 test:$(EXEC)
@@ -16,4 +17,3 @@ vars:
 	@echo "SOURCE : $(SOURCE)"
 	@echo "EXEC : $(EXEC)"
 	@echo "TEST_ARGS : $(TEST_ARGS)"
-	@echo "PROJECT_COMPILER : $(PROJ_COMPILER)"
