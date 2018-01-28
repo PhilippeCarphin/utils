@@ -25,23 +25,27 @@ int main ( int argc , char ** argv ) {
 
    if( argc <= 2 ) exit(1);
 
-   char * start = argv[1];
-   char * lastDelim = argv[1];
-   char * current = argv[1];
+   char * input_string = argv[1];
    int wrapLength = atoi(argv[2]);
-   char c = *current
 
+   char * start = input_string;
+   char * lastDelim = start;
+   char * current = start;
    int chars = 1;
+
+   char c = *current;
+
+   puts(input_string);
 
    /* Go to 80 chars */
    while(c != 0){
-      lastDelim = sart;
+      lastDelim = start;
       while((c = *current++) != 0 && chars++ <= wrapLength ){
          if( isDelim(c) )
             lastDelim = current - 1;
       }
       printLine(start,lastDelim);
-      start = current;
+      start = lastDelim + 1;
       chars = 1;
    }
 
