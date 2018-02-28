@@ -2,6 +2,15 @@
 #include <string.h>
 #include <stdio.h>
 
+void print_stats(char *start, char *cr_start, char *cr_end)
+{
+	printf("Stats : start : %p,  cr_start %p,  cr_end %p\n",
+			start,
+			cr_start - start,
+			cr_end - start
+	);
+}
+
 int isDelim(char c){
    switch(c){
       case '\0':
@@ -33,6 +42,9 @@ int main ( int argc , char ** argv ) {
    char * current = start;
    int chars = 1;
 
+   char *crossover_word_start = start;
+   char *crossover_word_end = start;
+
    char c = *current;
 
    puts(input_string);
@@ -41,11 +53,22 @@ int main ( int argc , char ** argv ) {
    while(c != 0){
       lastDelim = start;
       while((c = *current++) != 0 && chars++ <= wrapLength ){
-         if( isDelim(c) )
+         if( isDelim(c) ){
             lastDelim = current - 1;
+			crossover_word_start = current;
+		 }
       }
-      printLine(start,lastDelim);
-      start = lastDelim + 1;
+	  while((c = *current++) != 0 && !isDelim(c)){}
+	  crossover_word_end = current - 1;
+
+	  print_stats(start, crossover_word_start, crossover_word_end);
+	  if( start == crossover_word_start ){
+		  printLine(start, crossover_word_end);
+		  start = crossover_word_end + 1;
+	  } else {
+		  printLine(start,lastDelim);
+		  start = lastDelim + 1;
+	  }
       chars = 1;
    }
 
