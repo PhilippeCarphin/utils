@@ -7,6 +7,21 @@ shift
 
 TEMPLATES_DIR=~/Templates
 
+show_help(){
+	echo "template (show|use|add) [--src SOURCE [--dst DESTINATION]]
+
+	show : show content of templates directory
+
+	use : copy SOURCE to DESTINATION or to current directory if DESTINATION
+	      is not specified
+
+	add : copy SOURCE into templates directory under the same name if
+		  DESTINATION is not specified or under the name DESTINATION if it
+		  has been specified
+
+"
+}
+
 do_command()
 {
 	if [[ $cmd == "add" ]] ; then
@@ -15,14 +30,20 @@ do_command()
 		use_command
 	elif [[ $cmd == "show" ]] ; then
 		show_command
-	elif [[ $cmd == "show" ]] ; then
-		show_command
+	elif [[ $cmd == "help" ]] ; then
+		show_help
+	else
+		echo "Invalid command $cmd"
+		show_help
+		exit 1
 	fi
 }
 
 
 show_command()
 {
+	ls $TEMPLATES_DIR/$src
+	return
 	if [[ $(uname) == Darwin ]] ; then
 		open $TEMPLATES_DIR/$src
 	else
@@ -32,6 +53,12 @@ show_command()
 
 add_command()
 {
+	if [[  "$src" == "" ]] ; then
+		echo "--src SOURCE must be specified for add"
+		show_help
+		exit 1
+	fi
+
 	if [[  "$dst" == "" ]] ; then
 		dst=$src
 	fi
@@ -48,6 +75,12 @@ add_command()
 
 use_command()
 {
+	if [[  "$src" == "" ]] ; then
+		echo "--src SOURCE must be specified for use"
+		show_help
+		exit 1
+	fi
+
 	if [[ "$dst" == "" ]] ; then
 		dst=$src
 	fi
@@ -78,6 +111,8 @@ do
 	esac
 	shift
 done
+
+echo "src=$src dst=$dst"
 
 
 do_command
