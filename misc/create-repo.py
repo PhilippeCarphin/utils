@@ -25,5 +25,5 @@ if 'errors' in response:
     pprint.pprint(response)
     quit(1)
 
-subprocess.call(['git', 'remote' 'add' 'origin' 'https://github.com/philippecarphin/' + name])
+subprocess.call(['git', 'remote', 'add', 'origin', 'https://github.com/philippecarphin/' + name])
 subprocess.call(['git', 'push', '-u', 'origin', 'master'])
