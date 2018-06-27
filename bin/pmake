@@ -8,16 +8,18 @@
 # ref: https://stackoverflow.com/a/14923025/5795941
 
 make ${@} 2>&1 | perl -wln -M'Term::ANSIColor' -e '
+m/gcc/ and print "\e[1;32m", "$_", "\e[0m"
+or
 m/error/i and print "\e[1;91m", "$_", "\e[0m"
 or
 m/Error/i and print "\e[1;91m", "$_", "\e[0m"
+or
+m/TEST FAILED/i and print "\e[1;91m", "$_", "\e[0m"
 or
 m/Warning/i and print "\e[1;93m", "$_", "\e[0m"
 or
 m/Linking|\.a\b/ and print "\e[1;36m", "$_", "\e[0m"
 or
 m/^\./i and print "\e[1;94m", "$_", "\e[0m"
-or
-m/Building|gcc|g++|\bCC\b|\bcc\b/ and print "\e[1;32m", "$_", "\e[0m"
 or
 print; '
