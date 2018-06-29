@@ -1,3 +1,4 @@
 #!/bin/bash
 
-curl ipinfo.io/ip >> /Users/pcarphin/Dropbox/apt-ip
+curl ipinfo.io/ip >> $HOME/.ssh/ips/apt-ip
+rsync -av -cvs-exclude ~/.ssh/ips/ house:~/.ssh/ips/
