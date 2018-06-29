@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Hostname is either Philippes-iMac or house-linux
+# this computer publishes it's IP using $(hostname)
+# let LOCAL mean the one that I'm on
+# let REMOTE mean the other computer
+curl ipinfo.io/ip >> $HOME/.ssh/ips/$(hostname)-ip
+
+# One of these will be LOCAL pushing to REMOTE, the other one will be LOCAL
+# pushing to its own public IP which will fail
+rsync -av --cvs-exclude ~/.ssh/ips/ apt:~/.ssh/ips/
+rsync -av --cvs-exclude ~/.ssh/ips/ house:~/.ssh/ips/
+
+# Get the latest ips from the synced directory
+imac_ip=$(tail -n 1 ~/.ssh/ips/Philippes-iMac.local-ip)
+house_ip=$(tail -n 1 ~/.ssh/ips/house-linux-ip)
+
+# Rewrite the config-template with the most up-to-date ips.
+sed "s/__APT_IP_ADDRESS__/$imac_ip/" < ~/.ssh/config-template \
+   | sed "s/__HOUSE_IP_ADDRESS__/$house_ip/" > ~/.ssh/config
