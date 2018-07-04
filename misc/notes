@@ -1,5 +1,9 @@
 #!/bin/bash
 
+notes_editor=vim
+notes_prefix=Notes
+notes_extension=org
+
 command=$(basename $0)
 if [[ "$NOTES_DIR" == "" ]]; then
 	notes_dir=$HOME/Dropbox/Notes
@@ -9,9 +13,9 @@ fi
 
 openFile() {
    if [ "$1" != "" ] ; then
-	   file=Notes_$1.md
+	   file=${notes_prefix}_$1.org
    else
-	   file=Notes_$(date +%m-%d).md
+	   file=${notes_prefix}_$(date +%m-%d).org
    fi
    if [ ! -d "$notes_dir" ]; then
 	   echo "Creating note directory $notes_dir"
@@ -20,7 +24,7 @@ openFile() {
 	   mkdir -p $notes_dir
    fi
    pushd $notes_dir
-   vim $notes_dir/$file
+   $notes_editor $notes_dir/$file
    popd
 }
 
@@ -32,7 +36,7 @@ findFile() {
       echo files empty, using grep
       files=$(grep --recursive --files-with-matches $1 . | tr '\n' ' ')
    fi
-   vim $files -p
+   $notes_editor $files
    popd
 }
 
