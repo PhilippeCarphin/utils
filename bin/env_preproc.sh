@@ -1,2 +1,2 @@
 
-sort | sed 's/:/\n    /g'
+sort | sed 's/:/\\n    /g'
