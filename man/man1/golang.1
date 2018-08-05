@@ -1,0 +1,173 @@
+.TH "Hello world in go" "1" 
+
+.SH "Go programming language hello world"
+.PP
+This is a hello world go source file, and a hello world workspace.  There
+doesn't have to be a workspace.
+
+.SS "Install"
+.RS
+.nf
+\fCsudo dnf install golang
+\fP
+.fi
+.RE
+
+.RS
+.nf
+\fCwhich go
+\fP
+.fi
+.RE
+
+\fC
+/usr/local/bin/go
+\fP
+
+.SS "Workspace"
+.RS
+.nf
+\fCexport GOPATH=$PWD ;mkdir -p bin pkg src src/hello_dir ; touch src/hello_dir/hello_src.go ; tree
+\fP
+.fi
+.RE
+
+.RS
+.nf
+: .
+: ├── bin
+: ├── pkg
+: └── src
+:     └── hello_dir
+:         └── hello_src.go
+: 
+: 4 directories, 2 files
+
+.fi
+.RE
+
+.PP
+The \fIsrc\fP directory contains the directory \fIhello_dir\fP which contains the source file \fIhello_src.go\fP.
+
+.SS "Source file"
+.PP
+This is file:///home/pcarphin/Documents/GitHub/tests/Go_tests/hello_world_workspace_golang/src/hello_dir/hello_src.go \fBat\fP \fI\fIsrc/hello_dir/hello_src.go\fP\fP
+.RS
+.nf
+\fCpackage main
+
+import "fmt"
+
+func main() {
+  fmt.Printf("hello, world\n")
+}
+\fP
+.fi
+.RE
+.PP
+save it as such and come back had run the commands.
+.SS "Building"
+.PP
+We go into the directory for hello and we build hello
+.RS
+.nf
+\fCexport GOPATH=$PWD ; cd src/hello_dir ; go build
+\fP
+.fi
+.RE
+
+.RS
+.nf
+\fCtree
+\fP
+.fi
+.RE
+
+.RS
+.nf
+: .
+: ├── bin
+: ├── pkg
+: └── src
+:     └── hello_dir
+:         ├── hello_dir
+:         └── hello_src.go
+: 
+: 4 directories, 2 files
+
+.fi
+.RE
+
+.PP
+Notice that go used the name of the directory to name the executable. We run the executable:
+
+.RS
+.nf
+\fCsrc/hello_dir/hello_dir
+\fP
+.fi
+.RE
+
+\fC
+hello, world
+\fP
+
+.SS "Installing"
+.PP
+Installing with \fIgo install\fP will use \fI$GOPATH/bin\fP as a target:
+.RS
+.nf
+\fCexport GOPATH=$PWD ; cd src/hello_dir ; go install
+\fP
+.fi
+.RE
+
+\fC
+/home/pcarphin/Documents/GitHub/tests/Go_tests/hello_world_workspace_golang/src/hello_dir
+\fP
+
+.RS
+.nf
+\fCtree
+\fP
+.fi
+.RE
+
+.RS
+.nf
+: .
+: ├── bin
+: │   └── hello_dir
+: ├── pkg
+: └── src
+:     └── hello_dir
+:         └── hello_src.go
+: 
+: 4 directories, 2 files
+
+.fi
+.RE
+
+.RS
+.nf
+\fCbin/hello_dir
+\fP
+.fi
+.RE
+
+\fC
+hello, world
+\fP
+
+
+.SH "References"
+.IP \(em 4
+\fIhttps://golang.org/doc/install\fP
+.IP \(em 4
+\fIhttps://golang.org/doc/code.html#Workspaces\fP
+.IP \(em 4
+\fIhttps://golang.org/doc/#articles\fP
+
+.SH "See next"
+.PP
+\fIhttps://tour.golang.org/\fP
