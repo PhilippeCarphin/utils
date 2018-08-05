@@ -23,28 +23,29 @@
 # emacs links.
 ################################################################################
 takeover(){
-    for f in $files ; do
-        maybe_take $f
-        maybe_link $f
-    done
-    touch $token
+   local src=$1
+   local my_file=$2
+   maybe_move $src $my_file
+   maybe_link $my_file $src
 }
 
 ################################################################################
 # Restore from the saved emacs links in the current directory.
 ################################################################################
 restore(){
+    local src=$1
+
     for f in $files ; do
         maybe_restore $f
     done
-    rm $token
 }
 ################################################################################
 # Save is either saving a copy of the link or remembering that there was nothing
 # there
 ################################################################################
-maybe_take(){
+maybe_move(){
     local src=$1
+    local my_file=$2
 
     if ! [ -e $src ] ; then
         echo "$(tput setaf 5)REMEMBERING that there was no $src file by touching $(basename $src).delete$(tput sgr 0)"
@@ -58,22 +59,22 @@ maybe_take(){
 # Restore by either deleting or squashing with the saved file
 ################################################################################
 maybe_restore(){
-    local to_restore=$(basename $1)
+    local src=$1
+    local to_restore=$(basename $src)
     local restoration_file=$(find . -name "$to_restore.restore" -o -name "$to_restore.delete" | tail -1)
-    local dst=$1
 
     if [ -z $restoration_file ] || ! [ -e $restoration_file ] ; then
         return 0
     fi
 
     if [[ $restoration_file == *restore ]] ; then
-        echo "$(tput setaf 3)RESTORING $dst from $restoration_file$(tput sgr 0)"
-        mv $restoration_file $dst
+        echo "$(tput setaf 3)RESTORING $src from $restoration_file$(tput sgr 0)"
+        mv $restoration_file $src
     elif [[ $restoration_file == *delete ]] ; then
         rm $restoration_file
-        if [ -L $dst ] ; then
-            echo "$(tput setaf 1)DELETING link $dst$(tput sgr 0)"
-            rm -f $dst
+        if [ -L $src ] ; then
+            echo "$(tput setaf 1)DELETING link $src$(tput sgr 0)"
+            rm -f $src
         fi
     fi
 }
@@ -82,10 +83,8 @@ maybe_restore(){
 # Create a link for the file if the target exitst in pwd
 ################################################################################
 maybe_link(){
-    local link_name=$1
-    local base=$(basename $1)
-    base=${base##.}
-    local target=$this_dir/$base
+    local target=$1
+    local link_name=$2
 
     if [ -e $target ] ; then
        echo "$(tput setaf 4)LINKING $link_name --> $target$(tput sgr 0)"
@@ -97,22 +96,28 @@ maybe_link(){
 # Execution
 ################################################################################
 
-for f in $files ; do
-    if [ -e $f ] && ! [ -L $f ] ; then
-        echo "ERROR : file $f exists and is not a link"
-        exit 1
-    fi
-done
-
-for f in $(cat Linkfile) ; do
-   files="$files $(eval echo $f)"
-done
-
 this_dir=$PWD
 token=ACTIVE
 
+while read column_1 column_2 extra ; do
+
+   if [[ "$column_1" = \#* ]] ; then
+      continue
+   fi
+
+   src=$(eval echo $column_1)
+   my_file=$(eval echo $column_2)
+
+   if [ -e $token ] ; then
+      takeover $src $my_file
+   else
+      maybe_restore $src $my_file
+   fi
+
+done < Linkfile
+
 if [ -e $token ] ; then
-   restore
+   rm $token
 else
-   takeover
+   touch $token
 fi
