@@ -1,49 +1,11 @@
 #!/bin/bash
 #
-# For each link in Linkfile:
-#     base=$(basename link)
-#     save links previous state
-#     replace link with link to $PWD/base
-#
-# For each link in Linkfile:
-#     restore link to previous state
-#
-# Note: The state of the link might be to not exist, this will still be saved
-#       and restored
-# Note: All files concerned must be links or the script will abort
-# Note: The script alternates between linking and unlinking by leaving a file
-#       called ACTIVE in the PWD
-# Note: The states of links are saved by saving a copy as $PWD/$base.restore
-#       or by creating a file called $PWD/$base.delete so you should no use
-#       files with names ending with '.delete' or '.restore'
-#
 
-################################################################################
-# Make the current directory's emacs files the active ones and save the
-# emacs links.
-################################################################################
-takeover(){
-   local src=$1
-   local my_file=$2
-   maybe_move $src $my_file
-   maybe_link $my_file $src
-}
-
-################################################################################
-# Restore from the saved emacs links in the current directory.
-################################################################################
-restore(){
-    local src=$1
-
-    for f in $files ; do
-        maybe_restore $f
-    done
-}
 ################################################################################
 # Save is either saving a copy of the link or remembering that there was nothing
 # there
 ################################################################################
-maybe_move(){
+save_src(){
     local src=$1
     local my_file=$2
 
@@ -58,10 +20,10 @@ maybe_move(){
 ################################################################################
 # Restore by either deleting or squashing with the saved file
 ################################################################################
-maybe_restore(){
+restore_src(){
     local src=$1
-    local to_restore=$(basename $src)
-    local restoration_file=$(find . -name "$to_restore.restore" -o -name "$to_restore.delete" | tail -1)
+    local base_src=$(basename $src)
+    local restoration_file=$(find . -name "$base_src.restore" -o -name "$base_src.delete" | tail -1)
 
     if [ -z $restoration_file ] || ! [ -e $restoration_file ] ; then
         return 0
@@ -70,12 +32,10 @@ maybe_restore(){
     if [[ $restoration_file == *restore ]] ; then
         echo "$(tput setaf 3)RESTORING $src from $restoration_file$(tput sgr 0)"
         mv $restoration_file $src
-    elif [[ $restoration_file == *delete ]] ; then
+    elif [[ $restoration_file == *delete ]] && [ -L $src ] ; then
+        echo "$(tput setaf 1)DELETING link $src$(tput sgr 0)"
+        rm -f $src
         rm $restoration_file
-        if [ -L $src ] ; then
-            echo "$(tput setaf 1)DELETING link $src$(tput sgr 0)"
-            rm -f $src
-        fi
     fi
 }
 
@@ -96,9 +56,37 @@ maybe_link(){
 # Execution
 ################################################################################
 
-this_dir=$PWD
-token=ACTIVE
+################## VALIDATION all source files must be links ###################
+i=-1
+while read col1 extra ; do
+   i=$(($i + 1))
+   if [[ "$col1" = \#* ]] ; then
+      continue
+   fi
+   src=$(eval echo $col1)
+   if [ -e $src ] && ! [ -L $src ] ; then
+      echo "Precheck ERROR Linkfile line $i: $col1 exist and is not a link"
+      errors=true
+   fi
+done < Linkfile
 
+if [[ $errors == true ]] ; then
+   exit
+fi
+
+##################### Action based on presence of token file ###################
+action(){
+   src=$1
+   my_file=$2
+   if [ -e ./ACTIVE ] ; then
+      restore_src $src
+   else
+      save_src $src $my_file
+      maybe_link $my_file $src
+   fi
+}
+
+################# Iterateion on the lines of the file ##########################
 while read column_1 column_2 extra ; do
 
    if [[ "$column_1" = \#* ]] ; then
@@ -108,16 +96,13 @@ while read column_1 column_2 extra ; do
    src=$(eval echo $column_1)
    my_file=$(eval echo $column_2)
 
-   if [ -e $token ] ; then
-      takeover $src $my_file
-   else
-      maybe_restore $src $my_file
-   fi
+   action $src $my_file
 
 done < Linkfile
 
-if [ -e $token ] ; then
-   rm $token
+################## Toggle token file for next invocation #######################
+if [ -e ./ACTIVE ] ; then
+   rm ./ACTIVE
 else
-   touch $token
+   touch ./ACTIVE
 fi
