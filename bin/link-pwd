@@ -55,6 +55,7 @@ maybe_link(){
 ################################################################################
 # Execution
 ################################################################################
+this_dir=$PWD
 
 ################## VALIDATION all source files must be links ###################
 i=-1
@@ -94,7 +95,7 @@ while read column_1 column_2 extra ; do
    fi
 
    src=$(eval echo $column_1)
-   my_file=$(eval echo $column_2)
+   my_file=$this_dir/$(eval echo $column_2)
 
    action $src $my_file
 
