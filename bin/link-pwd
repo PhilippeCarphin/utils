@@ -20,23 +20,19 @@
 # list elements must be links.  Your files should not end with '.restore' or
 # '.delete'.
 
-files="$HOME/.emacs $HOME/.emacs.d $HOME/.spacemacs $HOME/.spacemacs.d"
+for f in $(cat linkfile) ; do
+   files="$files $(eval echo $f)"
+done
 
 ################################################################################
 # Make the current directory's emacs files the active ones and save the
 # emacs links.
 ################################################################################
 takeover(){
-    if [ -e $token ] ; then
-       echo "Already taken over"
-       exit 1
-    fi
-
     for f in $files ; do
         maybe_take $f
         maybe_link $f
     done
-
     touch $token
 }
 
@@ -117,11 +113,8 @@ done
 this_dir=$PWD
 token=ACTIVE
 
-case $1 in
-    takeover)
-        takeover
-        ;;
-    restore)
-        restore
-        ;;
-esac
+if [ -e $token ] ; then
+   restore
+else
+   takeover
+fi
