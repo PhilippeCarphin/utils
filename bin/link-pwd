@@ -31,7 +31,7 @@ restore_src(){
 
     if [[ $restoration_file == *restore ]] ; then
         echo "$(tput setaf 3)RESTORING $src from $restoration_file$(tput sgr 0)"
-        mv $restoration_file $src
+        mv -T $restoration_file $src
     elif [[ $restoration_file == *delete ]] && [ -L $src ] ; then
         echo "$(tput setaf 1)DELETING link $src$(tput sgr 0)"
         rm -f $src
