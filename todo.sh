@@ -8,6 +8,6 @@ else
 		echo "cat $TODO_FILE (use --open to open file in vim)"
 		cat $TODO_FILE
 	else
-		echo "$(date): $1" >> $TODO_FILE
+		echo "TODO $(date): $1" >> $TODO_FILE
 	fi
 fi

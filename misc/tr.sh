@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# Utility for displaying a continuously updating view of the directory named
+# in ~/.philpwd.
+#
+# This file is updated by the other utility called cdphil
+#
+# I used this to do screencast demos for youtube videos
+
 levels=2
 n_lines=10
 cmd=tree

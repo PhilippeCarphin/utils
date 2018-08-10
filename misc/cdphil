@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# This works with loop-tree.
+# loop-tree continuously displays the contents (using tree) of the directory
+# named in ~/.philpwd.
+
+builtin cd $1
+echo $(pwd) > ~/.philpwd
