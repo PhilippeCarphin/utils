@@ -1,0 +1,58 @@
+.TH "link-pwd : A quick link handlink tool" "1" 
+
+.SH "Description"
+.PP
+Creates links as described in a file called \fBLinkfile\fP with save and restore
+capabilities.
+
+.PP
+The \fBLinkfile\fP has two columns : \fItarget\fP and \fImy\d\s-2file\s+2\u\fP. The script will save
+\fItarget\fP as a \fIrestore\d\s-2file\s+2\u\fP in $PWD and replace \fItarget\fP with a link pointing
+to \fImy\d\s-2file\s+2\u\fP.
+
+.RS
+.nf
+\fClink-pwd [status|unlink|link|forget]
+\fP
+.fi
+.RE
+
+.SS "Status"
+.PP
+\fIstatus\fP will only show the states of \fItarget\fP, \fImy\d\s-2file\s+2\u\fP and any \fIrestore\fP
+files that are present.
+
+.SS "Link"
+.PP
+Save \fItarget\fP as $PWD//target/.restore or $PWD//target.delete depending on if
+\fItarget\fP existed or not.
+
+.PP
+The script \fBwill refuse to do anything whatsoever with anything that is not a
+link\fP. If any of the \fItarget\fP files are something else than links we're not
+touching them. If they are links they will be saved and you can do status to be
+sure.
+
+.PP
+The \fBsaved state can be that the file doesn't exist.\fP  If \fItarget\fP does not
+exist and \fIlink-pwd\fP creates it, it will delete it on \fIrestore\fP.  This also
+implies that \fB\fImy\d\s-2file\s+2\u\fP\fP does not need to exist.*
+
+.SS "Unlink"
+.PP
+Save \fItarget\fP links as $PWD//target/.restore
+
+.SS "Forget"
+.PP
+Delete any restore files that exist.
+
+.SH "Usage"
+.SS "\fIstatus\fP"
+.PP
+Show output of \fIls\fP for
+.IP \(em 4
+\fItarget\fP files
+.IP \(em 4
+\fImy\d\s-2file\s+2\u\fP files
+.IP \(em 4
+\fItarget\fP restore files

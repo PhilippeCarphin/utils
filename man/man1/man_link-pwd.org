@@ -1,0 +1,54 @@
+#+TITLE: link-pwd : A quick link handlink tool
+
+* Description
+
+Creates links as described in a file called *Linkfile* with save and restore
+capabilities.
+
+The *Linkfile* has two columns : /target/ and /my_file/. The script will save
+/target/ as a /restore_file/ in $PWD and replace /target/ with a link pointing
+to /my_file/.
+
+#+BEGIN_SRC sh
+link-pwd [status|unlink|link|forget]
+#+END_SRC
+
+** Status
+
+/status/ will only show the states of /target/, /my_file/ and any /restore/
+files that are present.
+
+** Link
+
+Save /target/ as /$PWD/target/.restore/ or /$PWD/target.delete/ depending on if
+/target/ existed or not.
+
+The script *will refuse to do anything whatsoever with anything that is not a
+link*. If any of the /target/ files are something else than links we're not
+touching them. If they are links they will be saved and you can do status to be
+sure.
+
+The *saved state can be that the file doesn't exist.*  If /target/ does not
+exist and /link-pwd/ creates it, it will delete it on /restore/.  This also
+implies that */my_file/* does not need to exist.*
+
+** Unlink
+
+Save /target/ links as /$PWD/target/.restore/ 
+
+** Forget
+
+Delete any restore files that exist.
+
+* Usage
+
+
+
+** =status=
+
+Show output of =ls= for
+- /target/ files
+- /my_file/ files
+- /target/ restore files
+
+
