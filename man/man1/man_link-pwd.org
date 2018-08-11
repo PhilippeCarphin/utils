@@ -1,16 +1,34 @@
 #+TITLE: link-pwd : A quick link handlink tool
 
-* Description
+
+
+* SINOPSIS
+
+  #+BEGIN_SRC sh
+  link-pwd <command> [-jp|--just-print] [-g|--group]
+  #+END_SRC
+
+* DESCRIPTION
+
 
 Creates links as described in a file called *Linkfile* with save and restore
 capabilities.
 
-The *Linkfile* has two columns : /target/ and /my_file/. The script will save
+The *Linkfile* has two columns :
+
+#+BEGIN_SRC sh
+  $HOME/.zprofile     zprofile
+  $HOME/.zshrc        zshrc
+  $HOME/.zshenv       zshenv
+  $HOME/.zsh_custom   zsh_custom
+#+END_SRC
+
+/target/ and /my_file/. The script will save
 /target/ as a /restore_file/ in $PWD and replace /target/ with a link pointing
 to /my_file/.
 
 #+BEGIN_SRC sh
-link-pwd [status|unlink|link|forget]
+  link-pwd <command> [-jp|--just-print] [-g|--group]
 #+END_SRC
 
 ** Status
@@ -35,20 +53,77 @@ implies that */my_file/* does not need to exist.*
 ** Unlink
 
 Save /target/ links as /$PWD/target/.restore/ 
+** forget
 
-** Forget
+The intended use is to put something somewhere and do just-print
+and check that everything's ok
 
-Delete any restore files that exist.
+#+BEGIN_SRC sh :dir ~/Documents/GitHub/pyenv/
+link-pwd link --just-print
+#+END_SRC
 
-* Usage
+Then link
 
+#+BEGIN_SRC sh
+link-pwd link
+#+END_SRC
 
+Make sure that everything is OK:
 
-** =status=
+#+BEGIN_SRC sh
+link-pwd status
+#+END_SRC
 
-Show output of =ls= for
-- /target/ files
-- /my_file/ files
-- /target/ restore files
+And clear up the restore files.
 
+#+BEGIN_SRC sh
+link-pwd forget
+#+END_SRC
 
+Or it can be for something temporary like trying out an emacs configuration.  I
+have this for a side config that I use to experiment
+
+#+BEGIN_SRC sh
+# source               my_file
+$HOME/.emacs           emacs
+$HOME/.emacs.d         emacs.d
+$HOME/.spacemacs       spacemacs
+$HOME/.spacemacs.d     spacemacs.d
+#+END_SRC
+
+My regular config has /.emacs.d/, /.spacemacs.d/ and /.spacemacs/.  And this
+side config has just an /emacs.d/.  The other ones dont exist.  And when I do
+link, the script will delete =$HOME/.spacemacs= and so on so that the files in
+the left column mimick the state of existence or non-existence of the files in
+the left column.
+
+* OPTIONS
+** -jp, --just-print
+
+Show only output of what the command would do.
+
+** -f, --file
+
+Use other file than Linkfile.  I've made it so that it has to be in $PWD while
+you call this tool because there are less chances of things going wrong.
+
+** -g, --group
+
+Files can have groups of links allowing to link or unlink only certain files.
+
+#+BEGIN_SRC 
+[git]
+  $HOME/.gitconfig gitconfig
+  $HOME/.gitignore.global gitignore.global
+[spacemacs]
+  $HOME/.spacemacs spacemacs
+  $HOME/.spacemacs.d spacemacs.d
+  $HOME/.emacs.d/private emacs.d/private
+[tmux]
+  $HOME/.tmux.conf tmux.conf
+[zhs]
+  $HOME/.zprofile zprofile
+  $HOME/.zshrc zshrc
+  $HOME/.zshenv zshenv
+  $HOME/.zsh_custom zsh_custom
+#+END_SRC
