@@ -52,6 +52,9 @@ maybe_link(){
     fi
 }
 
+################################################################################
+# Create a link for the file if the target exitst in pwd
+################################################################################
 unlink_target(){
     local target=$1
 
@@ -66,6 +69,9 @@ unlink_target(){
     fi
 }
 
+################################################################################
+# Create a link for the file if the target exitst in pwd
+################################################################################
 save_and_link(){
     local target=$1
     local my_file=$2
@@ -73,6 +79,9 @@ save_and_link(){
     maybe_link $my_file $target
 }
 
+################################################################################
+# Create a link for the file if the target exitst in pwd
+################################################################################
 status()
 {
     local target=$1
@@ -104,13 +113,13 @@ status()
     fi
 }
 
-################################################################################
-# Execution
-################################################################################
 this_dir=$PWD
 
 
 
+################################################################################
+# Functions used to validate lines
+################################################################################
 error_restore(){
     echo "$cmd : ERROR : Cannot $1 because there are restore files present"
     echo "$cmd : ERROR : Check it out and run 'link-pwd forget' to clear restore files"
@@ -165,26 +174,15 @@ valid_line()
     return 0
 }
 
-# grp='[asdf]'
-# if is_group $grp ; then
-    # echo "The group $grp is a group"
-# fi
-# grp='[asdf'
-# if is_group $grp ; then
-    # echo "The group $grp is a group"
-# fi
-# grp='[asdf'
-# if is_group $grp ; then
-    # echo "The group $grp is a group"
-# fi
-# grp='asdf]'
-# if is_group $grp ; then
-    # echo "The group $grp is a group"
-# fi
-# exit 0
-
+################################################################################
+# Execution
+################################################################################
+#
 ##################### Action based on presence of token file ###################
 
+################################################################################
+# Option parsing
+################################################################################
 action=status
 link_file=Linkfile
 while [[ $# -gt 0 ]]
@@ -242,6 +240,9 @@ do
     shift
 done
 
+################################################################################
+# Validation of linkfile
+################################################################################
 ################## VALIDATION There must be a Linkfile #########################
 link_file=$PWD/$(basename $link_file)
 if ! [ -e $link_file ] ; then
@@ -270,8 +271,11 @@ if [[ "$1" != status ]] ; then
         exit
     fi
 fi
+
+################################################################################
+# Running the command on the lines of the file
+################################################################################
 if [ -e $Linkfile ] ; then
-    ################# Iterateion on the lines of the file ##########################
     while read column_1 column_2 extra ; do
 
         if [[ "$column_1" = \#* ]] ; then
@@ -280,7 +284,6 @@ if [ -e $Linkfile ] ; then
 
         if is_group $column_1 ; then
             current_group=$(get_group $column_1)
-            echo "Changed current group to $current_group"
             continue
         fi
 
@@ -294,8 +297,6 @@ if [ -e $Linkfile ] ; then
         ! [ -z $action ] && $action $the_target $the_my_file
 
     done < $link_file
-    exit 0
-
 elif ! [ -z "$linkfile" ] ; then
     exit 0
     if [[ $this_dir == $PWD ]] ; then
