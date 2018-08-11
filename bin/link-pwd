@@ -253,14 +253,13 @@ do
             fi
             ;;
         restore)
-            if exists_restore_files ; then
-                echo "$cmd : No restore files present"
-                action=status
-            fi
+            action=restore_target
+            ;;
+        status)
+            action=status
             ;;
         *)
-            echo "Unknown option or subcommand $option"
-            action=status
+            echo "Unknown subcommand $subcommand"
             ;;
     esac
     shift
