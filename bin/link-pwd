@@ -1,12 +1,12 @@
 #!/bin/bash
 #
+cmd=$(basename $0)
 ################################################################################
 # Save is either saving a copy of the link or remembering that there was nothing
 # there
 ################################################################################
 save_src(){
     local src=$1
-    local my_file=$2
 
     if ! [ -e $src ] ; then
         echo "$(tput setaf 5)REMEMBERING that there was no $src file by touching $(basename $src).delete$(tput sgr 0)"
@@ -59,7 +59,7 @@ unlink_src(){
     local src=$1
 
     if [ -e $src ] && ! [ -L $src ] ; then
-        echo "$0 : ERROR : unlink_src : src=$src exits and is not a link"
+        echo "$cmd : ERROR : unlink_src : src=$src exits and is not a link"
         exit 1
     fi
 
@@ -76,51 +76,82 @@ save_and_link(){
     maybe_link $my_file $src
 }
 
+status()
+{
+    src=$1
+    my_file=$2
+    local base_src=$(basename $src)
+    local delete_file="$base_src.delete"
+    local restore_file="$base_src.restore"
+
+    if ! [ -z $delete_file ] && [ -e $delete_file ] ; then
+        echo "$(tput setaf 1)$delete_file : $(ls -s $src | tr -s ' ' | cut -d ' ' -f 9,10,11)$(tput sgr 0)"
+    fi
+
+    if ! [ -z $restore_file ] && [ -e $restore_file ] ; then
+        echo "$(tput setaf 3)$(ls -l $restore_file | tr -s ' ' | cut -d ' ' -f 9,10,11)$(tput sgr 0)"
+    fi
+
+    if [ -e $src ] && [ -L $src ] ; then
+        echo "$(tput setaf 4)$(ls -l $src | tr -s ' ' | cut -d ' ' -f 9,10,11)$(tput sgr 0)"
+    elif [ -e $src ] ; then
+        echo "$(tput setaf 1)$(ls -l $src | tr -s ' ' | cut -d ' ' -f 9,10,11)$(tput sgr 0)"
+    fi
+
+    if [ -e $my_file ] ; then
+        echo "$(tput setaf 2)$(ls -l $my_file | tr -s ' ' | cut -d ' ' -f 9,10,11)$(tput sgr 0)"
+    fi
+}
 
 ################################################################################
 # Execution
 ################################################################################
 this_dir=$PWD
 
-########## OPTION TO "FORGET" saved links and make things permanent ********####
-if [[ "$1" == forget ]] ; then
-    rm -f ACTIVE
-    rm -f .*.restore
-    rm -f .*.delete
-    exit 0
-fi
-
 ################## VALIDATION There must be a Linkfile #########################
 if ! [ -e Linkfile ] ; then
-    echo "$0 : ERROR : No Linkfile in PWD"
+    echo "$cmd : ERROR : No Linkfile in PWD"
     exit 1
 fi
 
 ################## VALIDATION all source files must be links ###################
-i=-1
-while read col1 extra ; do
-   i=$(($i + 1))
-   if [[ "$col1" = \#* ]] ; then
-      continue
-   fi
-   src=$(eval echo $col1)
-   if [ -e $src ] && ! [ -L $src ] ; then
-      echo "Precheck ERROR Linkfile line $i: $col1 exist and is not a link"
-      errors=true
-   fi
-done < Linkfile
+if [[ "$1" != status ]] ; then
+    i=1
+    while read col1 extra ; do
+        if [[ "$col1" != \#* ]] ; then
+            src=$(eval echo $col1)
+            if [ -e $src ] && ! [ -L $src ] ; then
+                echo "$cmd : ERROR : Linkfile line $i : src=$col1 exists and is not a link"
+                errors=true
+            fi
+        fi
+        i=$(($i + 1))
+    done < Linkfile
 
-if [[ $errors == true ]] ; then
-   exit
+    if [[ $errors == true ]] ; then
+    exit
+    fi
 fi
 
 ##################### Action based on presence of token file ###################
-if [ -e ./ACTIVE ] ; then
-    action=restore_src
+if [[ "$1" == forget ]] ; then
+    rm -f ACTIVE
+    rm -f *.restore .*.restore
+    rm -f *.delete .*.delete
+    exit 0
 elif [[ "$1" == unlink ]] ; then
-    action=unlink_src
+    action=save_src
+    touch ./ACTIVE
+elif [[ "$1" == status ]] ; then
+    action=status
 else
-    action=save_and_link
+    if [ -e ./ACTIVE ] ; then
+        action=restore_src
+        rm ./ACTIVE
+    else
+        action=save_and_link
+        touch ./ACTIVE
+    fi
 fi
 
 ################# Iterateion on the lines of the file ##########################
@@ -136,10 +167,3 @@ while read column_1 column_2 extra ; do
    $action $src $my_file
 
 done < Linkfile
-
-################## Toggle token file for next invocation #######################
-if [ -e ./ACTIVE ] ; then
-   rm ./ACTIVE
-else
-   touch ./ACTIVE
-fi
