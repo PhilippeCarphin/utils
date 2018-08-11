@@ -146,44 +146,54 @@ exists_restore_files()
 }
 
 ##################### Action based on presence of token file ###################
-case $1 in
-    forget)
-        rm -f *.restore .*.restore
-        exit 0
-        ;;
-    unlink)
-        if ! exists_restore_files ; then
-            action=save_target
-        else
-            error_restore $1
+
+action=status
+while [[ $# -gt 0 ]]
+do
+    option="$1"
+    optarg="$2"
+    case $option in
+        -f|--file)
+            if [ -z $optarg ] ; then
+                echo "ERROR --file optarg empty"
+                exit 1
+            fi
+            $Linkfile=$optarg
+            shift
+            ;;
+        forget)
+            rm -f *.restore .*.restore
+            exit 0
+            ;;
+        unlink)
+            if ! exists_restore_files ; then
+                action=save_target
+            else
+                error_restore unlink
+                action=status
+            fi
+            ;;
+        link)
+            if ! exists_restore_files ; then
+                action=save_and_link
+            else
+                error_restore link
+                action=status
+            fi
+            ;;
+        restore)
+            if exists_restore_files ; then
+                echo "$cmd : No restore files present"
+                action=status
+            fi
+            ;;
+        *)
+            echo "Unknown option or subcommand $option"
             action=status
-            exit 1
-        fi
-        ;;
-    link)
-        if ! exists_restore_files ; then
-            action=save_and_link
-        else
-            error_restore $1
-            action=status
-            exit 1
-        fi
-        ;;
-    restore)
-        if exists_restore_files ; then
-            action=restore_target
-        else
-            echo "$cmd : No restore files present"
-            exit 1
-        fi
-        ;;
-    status)
-        action=status
-        ;;
-    *)
-        action=status
-        ;;
-esac
+            ;;
+    esac
+    shift
+done
 
 if [ -e Linkfile ] ; then
     ################# Iterateion on the lines of the file ##########################
