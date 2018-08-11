@@ -67,7 +67,7 @@ class Penv:
         if key in pretty_stringizers:
             return pretty_stringizers[key](key, self.env[key])
         else:
-            return key + '=' + repr(self.env[key])
+            return key + '=' + str(self.env[key])
 
     def json_dumps(self):
         return json.dumps(self.env)
@@ -168,27 +168,17 @@ def space_list_to_str(var, value):
 def compare_lists(before, after):
     new = set(after) - set(before)
     gone = set(before) - set(after)
+    kept = set(before).intersection(set(after))
     indent = '\n      '
     result = ''
     if new:
-        result += '    ADDED:' + indent + indent.join(new)
+        result += '    ADDED:' + indent + indent.join(new) + '\n'
+    if (new or gone) and kept:
+        result += '    KEPT:' + indent + indent.join(kept) + '\n'
     if gone:
-        result += '    DELETED:' + indent + indent.join(new)
-    return result
+        result += '    DELETED:' + indent + indent.join(gone) + '\n'
+    return result.strip('\n')
 
-def export_dump_to_json(filename):
-    with open(filename, 'r') as f:
-        lines = f.readlines()
-
-    environ_dict = {}
-    for line in lines:
-        if line.startswith("$'") and line.endswith("'"):
-            line = line[2:-1].replace('\\n', '\n')
-            print(line)
-        var = line.split('=')[0]
-        value = '='.join(line.split('=')[1:])
-        environ_dict[var] = value
-    
 
 
 if __name__ == "__main__":
