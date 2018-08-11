@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-
 ################################################################################
 # Save is either saving a copy of the link or remembering that there was nothing
 # there
@@ -56,10 +55,46 @@ maybe_link(){
     fi
 }
 
+unlink_src(){
+    local src=$1
+
+    if [ -e $src ] && ! [ -L $src ] ; then
+        echo "$0 : ERROR : unlink_src : src=$src exits and is not a link"
+        exit 1
+    fi
+
+    if [ -e $target ] ; then
+        echo "$(tput setaf 1)DELETING link $src$(tput sgr 0)"
+        rm -f $src
+    fi
+}
+
+save_and_link(){
+    src=$1
+    my_file=$2
+    save_src $src $my_file
+    maybe_link $my_file $src
+}
+
+
 ################################################################################
 # Execution
 ################################################################################
 this_dir=$PWD
+
+########## OPTION TO "FORGET" saved links and make things permanent ********####
+if [[ "$1" == forget ]] ; then
+    rm -f ACTIVE
+    rm -f .*.restore
+    rm -f .*.delete
+    exit 0
+fi
+
+################## VALIDATION There must be a Linkfile #########################
+if ! [ -e Linkfile ] ; then
+    echo "$0 : ERROR : No Linkfile in PWD"
+    exit 1
+fi
 
 ################## VALIDATION all source files must be links ###################
 i=-1
@@ -80,16 +115,13 @@ if [[ $errors == true ]] ; then
 fi
 
 ##################### Action based on presence of token file ###################
-action(){
-   src=$1
-   my_file=$2
-   if [ -e ./ACTIVE ] ; then
-      restore_src $src
-   else
-      save_src $src $my_file
-      maybe_link $my_file $src
-   fi
-}
+if [ -e ./ACTIVE ] ; then
+    action=restore_src
+elif [[ "$1" == unlink ]] ; then
+    action=unlink_src
+else
+    action=save_and_link
+fi
 
 ################# Iterateion on the lines of the file ##########################
 while read column_1 column_2 extra ; do
@@ -101,7 +133,7 @@ while read column_1 column_2 extra ; do
    src=$(eval echo $column_1)
    my_file=$this_dir/$(eval echo $column_2)
 
-   action $src $my_file
+   $action $src $my_file
 
 done < Linkfile
 
