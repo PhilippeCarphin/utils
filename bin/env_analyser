@@ -1,0 +1,3 @@
+#!/bin/bash
+this_dir=$(cd $(dirname $0) > /dev/null && pwd)
+python3 $this_dir/../misc/env_analyser.py $@
