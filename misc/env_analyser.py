@@ -211,7 +211,7 @@ if __name__ == "__main__":
             print("DIFF AFTER " + ' '.join(sys.argv[2:]))
             penv.diff_after(sys.argv[2:])
         elif command == "get":
-            print(Penv().get_str(sys.argv[2]))
+            print(Penv().get_pretty_str(sys.argv[2]))
         elif command == 'compare':
             with open(sys.argv[2], 'r') as f:
                 env_before = Penv(json.loads(f.read()))
