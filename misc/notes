@@ -1,49 +1,47 @@
 #!/bin/bash
 
-notes_editor=vim
+command=$(basename $0)
+notes_editor="ec -ct"
 notes_prefix=Notes
 notes_extension=org
-
-command=$(basename $0)
-if [[ "$NOTES_DIR" == "" ]]; then
-	notes_dir=$HOME/Dropbox/Notes
+if [ -z $PHIL_NOTES_DIR ] ; then
+    notes_dir=$HOME/Dropbox/Notes/Notes_BUCKET
 else
-	notes_dir="$NOTES_DIR"
+    notes_dir="$PHIL_NOTES_DIR"
 fi
 
-openFile() {
-   if [ "$1" != "" ] ; then
-	   file=${notes_prefix}_$1.org
-   else
-	   file=${notes_prefix}_$(date +%m-%d).org
-   fi
-   if [ ! -d "$notes_dir" ]; then
-	   echo "Creating note directory $notes_dir"
-	   echo -n "Press enter to continue"
-	   read b
-	   mkdir -p $notes_dir
-   fi
-   pushd $notes_dir
-   $notes_editor $notes_dir/$file
-   popd
+openFile()
+{
+    if [ "$1" != "" ] ; then
+        file=${notes_prefix}_$1.org
+    else
+        file=${notes_prefix}_$(date +%m-%d).org
+    fi
+    eval $notes_editor $notes_dir/$file
 }
 
-findFile() {
-   pushd $notes_dir
-   files="$(find . -name "*$1*" | tr '\n' ' ')"
-   echo files = $files
-   if [ "$files" = "" ] ; then
-      echo files empty, using grep
-      files=$(grep --recursive --files-with-matches $1 . | tr '\n' ' ')
-   fi
-   $notes_editor $files
-   popd
+findFile()
+{
+    files="$(find . -name "*$1*" | tr '\n' ' ')"
+
+    echo files = $files
+    if [ "$files" = "" ] ; then
+        echo files empty, using grep
+        files=$(grep --recursive --files-with-matches $1 . | tr '\n' ' ')
+    fi
+
+    eval $notes_editor $files
 }
 
-
-if [ $command = notes ] ; then
-   openFile $1
+if pushd $notes_dir > /dev/null 2>&1 ; then
+    if [ $command = notes ] ; then
+        openFile $1
+    else
+        findFile $1
+    fi
+    popd 
 else
-   findFile $1
+    echo "Could not cd into NOTES_DIR=$PHIL_NOTES_DIR"
+    exit 1
 fi
 
