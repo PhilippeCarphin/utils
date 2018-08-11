@@ -18,6 +18,107 @@ def make_decorator(dictionary):
             return f
     return env_decorator
 
+class Penv:
+    ''' Class that encapsulates a dictionnary of environment variables
+    The keys are variable names and the values are the processed string values
+    of the environment variables as defined by the 'processor' functions '''
+    def __init__(self, d=None):
+        ''' Create an instance from an already made dictionary or from the
+        environment dictionary from os.environ. '''
+        if d is None:
+            d = os.environ
+            self.env = penv_dict_from_environ_dict(d)
+        else:
+            self.env = d
+
+    def __getitem__(self, key):
+        return self.env[key]
+
+    def __iter__(self):
+        return iter(sorted(self.env))
+
+    def __str__(self):
+        return str(self.env)
+
+    def get_str(self, key):
+        ''' Returns a string representing the environment variable.  This string
+        may or may not be equal to the string value of the variable '''
+        if key in stringizers:
+            return stringizers[key](key, self.env[key])
+        else:
+            return self.env[key]
+
+    def get_pretty_str(self, key):
+        ''' Get a pretty representation of the variable '''
+        if key in pretty_stringizers:
+            return pretty_stringizers[key](key, self.env[key])
+        else:
+            return key + '=' + str(self.env[key])
+
+    def json_dumps(self):
+        ''' Dump the dictionary of variabl and their processed values '''
+        return json.dumps(self.env)
+
+    def pretty(self):
+        ''' Return a string formed by all the pretty printed variables '''
+        return '\n'.join(self.get_pretty_str(key) for key in self)
+
+def compare_envs(env_before, env_after):
+    ''' Return a string giving a report of the differences between the two
+    environment objects '''
+    new_vars = set(env_after.env) - set(env_before.env)
+    deleted_vars = set(env_before.env) - set(env_after.env)
+    common_vars = set(env_before.env).intersection(set(env_after.env))
+
+    report = []
+    report.append('========== New variables ===========')
+    for var in new_vars:
+        report.append(env_after.get_pretty_str(var))
+
+    report.append('========== Deleted variables =======')
+    for var in deleted_vars:
+        report.append(env_before.get_pretty_str(var))
+
+    report.append('========= Changed Vars =============')
+    for var in common_vars:
+        before = env_before.env[var]
+        after = env_after.env[var]
+        if var in comparers:
+            result = comparers[var](before, after)
+            if result != '':
+                report.append(var + '\n' + result)
+        elif (env_before.env[var], str):
+            if before == after:
+                continue
+        else:
+            indent = '\n    '
+            report.append(var + indent + 'BEFORE=' + str(env_before.get_str(var))
+                                + indent + 'AFTER=' + str(env_after.get_str(var)))
+    return '\n'.join(report)
+
+
+def penv_dict_from_environ_dict(d):
+    ''' Transform the os.environ dictionary to the format that I use:
+    Each variable can have a function that processes the string value into a
+    list or dictionary or what ever else you want. '''
+    penv_dict = {}
+    for var in d:
+        if var in processors:
+            penv_dict[var] = processors[var](d[var])
+        else:
+            penv_dict[var] = d[var]
+    return penv_dict
+
+'''
+================================================================================
+Definitions of the processing and string functions
+For any variable, you can define a function that processes it (taking a string
+to any type of object)
+For any variable, you can define a function that will take a variable name and a
+ivalue and return a string.
+Same thing for the pretty_stringizes
+================================================================================
+'''
 ''' Dictionaries with accompanying decorators used to register the functions
 that process variables from string values and puts them back as strings in a
 pretty way or in a normal way'''
@@ -39,91 +140,11 @@ pretty_stringizes = make_decorator(pretty_stringizers)
 comparers = {}
 compares = make_decorator(comparers)
 
-
-class Penv:
-    def __init__(self, d=None):
-        if d is None:
-            d = os.environ
-            self.env = penv_dict_from_environ_dict(d)
-        else:
-            self.env = d
-
-    def __getitem__(self, key):
-        return self.env[key]
-
-    def __iter__(self):
-        return iter(sorted(self.env))
-
-    def __str__(self):
-        return str(self.env)
-
-    def get_str(self, key):
-        if key in stringizers:
-            return stringizers[key](key, self.env[key])
-        else:
-            return self.env[key]
-
-    def get_pretty_str(self, key):
-        if key in pretty_stringizers:
-            return pretty_stringizers[key](key, self.env[key])
-        else:
-            return key + '=' + str(self.env[key])
-
-    def json_dumps(self):
-        return json.dumps(self.env)
-
-    def pretty(self):
-        return '\n'.join(self.get_pretty_str(key) for key in self)
-
-def compare_envs(env_before, env_after):
-
-    new_vars = set(env_after.env) - set(env_before.env)
-    deleted_vars = set(env_before.env) - set(env_after.env)
-    common_vars = set(env_before.env).intersection(set(env_after.env))
-
-    print('========== New variables ===========')
-    for var in new_vars:
-        print(env_after.get_pretty_str(var))
-
-    print('========== Deleted variables =======')
-    for var in deleted_vars:
-        print(env_before.get_pretty_str(var))
-
-    print('========= Changed Vars =============')
-    for var in common_vars:
-        before = env_before.env[var]
-        after = env_after.env[var]
-        if var in comparers:
-            result = comparers[var](before, after)
-            if result != '':
-                print(var + '\n' + result)
-        elif (env_before.env[var], str):
-            if before == after:
-                continue
-        else:
-            indent = '\n    '
-            print(var + indent + 'BEFORE=' + env_before.get_str(var)
-                    + indent + 'AFTER=' + env_after.get_str(var))
-
-
-def penv_dict_from_environ_dict(d):
-    penv_dict = {}
-    for var in d:
-        if var in processors:
-            penv_dict[var] = processors[var](d[var])
-        else:
-            penv_dict[var] = d[var]
-    return penv_dict
-
-def env_after_command(command):
-    # os.system(command + " ; /usr/local/bin/python3 " + __file__ + " /tmp/env_analyser_dump")
-    subprocess.run(command + [';' , 'python3' , __file__ , 'dump', '/tmp/env_analyser_dump'])
-    with open("/tmp/env_analyser_dump", 'r') as f:
-        d = dict(json.loads(f.read()))
-        penv = Penv(d)
-        return penv
-
-
+'''
+================================================================================
+SSH_CLIENT
+================================================================================
+'''
 @processes(['SSH_CLIENT'])
 def process_ssh_client(value):
     tokens = value.split(' ')
@@ -138,6 +159,11 @@ def pretty_str_ssh_client(var, value):
     return var + '=' + ' '.join(value[k] for k in value)
 
 
+'''
+================================================================================
+colon list variables
+================================================================================
+'''
 colon_lists = ['CDPATH', 'PATH', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH']
 @processes(colon_lists)
 def process_colon_list(value):
@@ -152,17 +178,6 @@ def colon_list_to_pretty_str(var, value):
     prefix = var + '='
     joiner = '\n' + ' '*len(prefix)
     return prefix + joiner.join(value)
-
-
-space_lists = ['SSH_CONNECTION']
-@processes(space_lists)
-def process_space_list(value):
-    return value.strip(' ').split(' ')
-
-@stringizes(space_lists)
-@pretty_stringizes(space_lists)
-def space_list_to_str(var, value):
-    return var + '=' + ' '.join(value)
 
 @compares(colon_lists)
 def compare_lists(before, after):
@@ -179,13 +194,32 @@ def compare_lists(before, after):
         result += '    DELETED:' + indent + indent.join(gone) + '\n'
     return result.strip('\n')
 
+'''
+================================================================================
+colon list variables
+================================================================================
+'''
+space_lists = ['SSH_CONNECTION']
+@processes(space_lists)
+def process_space_list(value):
+    return value.strip(' ').split(' ')
+
+@stringizes(space_lists)
+@pretty_stringizes(space_lists)
+def space_list_to_str(var, value):
+    return var + '=' + ' '.join(value)
 
 
+'''
+================================================================================
+================================== MAIN PART ===================================
+
+Take various actions based on command line arguments
+================================================================================
+'''
 if __name__ == "__main__":
     penv = Penv()
     import sys
-
-
 
     if len(sys.argv) > 1:
         command = sys.argv[1]
@@ -197,9 +231,6 @@ if __name__ == "__main__":
                 print(Penv().json_dumps())
         elif command == "pretty":
             print(penv.pretty())
-        elif command == "analyse_command":
-            print("DIFF AFTER " + ' '.join(sys.argv[2:]))
-            penv.diff_after(sys.argv[2:])
         elif command == "get":
             print(Penv().get_pretty_str(sys.argv[2]))
         elif command == 'compare':
@@ -207,8 +238,6 @@ if __name__ == "__main__":
                 env_before = Penv(json.loads(f.read()))
             with open(sys.argv[3], 'r') as f:
                 env_after = Penv(json.loads(f.read()))
-            compare_envs(env_before, env_after)
+            print(compare_envs(env_before, env_after))
     else:
-        print("HELLO")
-        # print(env_after_command('source ~/.philconfig/FILES/envvars').pretty())
-        # penv.diff_after('export BONER=TOWN')
+        print(penv.pretty())
