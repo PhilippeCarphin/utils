@@ -33,6 +33,10 @@ findFile()
     eval $notes_editor $files
 }
 
+# Trying it out:
+ec $notes_dir -c --no-wait
+exit 0
+
 if pushd $notes_dir > /dev/null 2>&1 ; then
     if [ $command = notes ] ; then
         openFile $1
