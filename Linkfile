@@ -1,2 +1,8 @@
 # Linkfile for utils
+[OnlyGroup]
+$HOME/.local/man/man1/link-pwd.1 man/man1/man_link-pwd.man
+$HOME/.local/man/man1/link-pwd.1 man/man1/man_link-pwd.man
+$HOME/.local/man/man1/link-pwd.1 man/man1/man_link-pwd.man
+[NewGroup]
+$HOME/.local/man/man1/link-pwd.1 man/man1/man_link-pwd.man
 $HOME/.local/man/man1/link-pwd.1 man/man1/man_link-pwd.man

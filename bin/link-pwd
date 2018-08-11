@@ -121,6 +121,64 @@ exists_restore_files()
     ls -a | grep '.\.restore' > /dev/null
 }
 
+is_group(){
+    local line=$1
+    echo $line | grep '\[[a-zA-Z0-9]\+\]' >/dev/null
+}
+
+get_group()
+{
+    local line=$1
+    line=${line%%']'}
+    line=${line##'['}
+    echo $line
+}
+
+valid_line()
+{
+    local line="$1 $2 $3"
+    if echo $line '^#' > /dev/null ; then
+        return 0
+    fi
+
+    if is_group $line ; then
+        if echo $line | grep '\[[^a-zA-Z0-9]\+\]' >/dev/null ; then
+            echo "Forbidden characters in group name"
+            return 1
+        fi
+    else
+        if echo $line | grep '[\[\]]\+]' >/dev/null ; then
+            echo "The chars '[' and ']' are not allowed in paths"
+            return 1
+        fi
+        words_on_line=$(echo $line | wc | tr -s ' ' | cut -d ' ' -f 2)
+        if [[ $words_on_line != 2 ]] ; then
+            echo "There needs to be two paths on the line"
+            echo $line
+            return 1
+        fi
+    fi
+    return 0
+}
+
+# grp='[asdf]'
+# if is_group $grp ; then
+    # echo "The group $grp is a group"
+# fi
+# grp='[asdf'
+# if is_group $grp ; then
+    # echo "The group $grp is a group"
+# fi
+# grp='[asdf'
+# if is_group $grp ; then
+    # echo "The group $grp is a group"
+# fi
+# grp='asdf]'
+# if is_group $grp ; then
+    # echo "The group $grp is a group"
+# fi
+# exit 0
+
 ##################### Action based on presence of token file ###################
 
 action=status
@@ -130,6 +188,13 @@ do
     option="$1"
     optarg="$2"
     case $option in
+        -g|--group)
+            if [ -z $optarg ] ; then
+                echo "ERROR --group optarg empty"
+                exit 1
+            fi
+            group_to_link=$optarg
+            ;;
         -f|--file)
             if [ -z $optarg ] ; then
                 echo "ERROR --file optarg empty"
@@ -179,11 +244,13 @@ if ! [ -e $link_file ] ; then
     echo "Note that this tool wants you to be in the same directory as the linkfile even if you specify it on the command line"
     exit 1
 fi
-
 ################## VALIDATION all source files must be links ###################
 if [[ "$1" != status ]] ; then
     i=1
-    while read col1 extra ; do
+    while read col1 col2 extra ; do
+        if ! valid_line $col1 $col2 $extra ; then
+            echo "INVALID LINE in Linkfile : $i"
+        fi
         if [[ "$col1" != \#* ]] ; then
             the_target=$(eval echo $col1)
             if [ -e $the_target ] && ! [ -L $the_target ] ; then
@@ -192,7 +259,7 @@ if [[ "$1" != status ]] ; then
             fi
         fi
         i=$(($i + 1))
-    done < Linkfile
+    done < $link_file
 
     if [[ $errors == true ]] ; then
         exit
@@ -203,6 +270,16 @@ if [ -e $Linkfile ] ; then
     while read column_1 column_2 extra ; do
 
         if [[ "$column_1" = \#* ]] ; then
+            continue
+        fi
+
+        if is_group $column_1 ; then
+            current_group=$(get_group $column_1)
+            echo "Changed current group to $current_group"
+            continue
+        fi
+
+        if [[ $group_to_link != $current_group ]] ; then
             continue
         fi
 
