@@ -136,25 +136,29 @@ get_group()
 
 valid_line()
 {
-    local line="$1 $2 $3"
-    if echo $line '^#' > /dev/null ; then
+    local c1=$1
+    local c2=$2
+    local c3=$3
+    if echo $c1 '^#' > /dev/null ; then
         return 0
     fi
 
-    if is_group $line ; then
-        if echo $line | grep '\[[^a-zA-Z0-9]\+\]' >/dev/null ; then
+    if is_group $c1 ; then
+        if echo $c1 | grep '\[[^a-zA-Z0-9]\+\]' >/dev/null ; then
             echo "Forbidden characters in group name"
             return 1
         fi
+        if ! [ -z $c2 ] ; then
+            echo "Extra text after group : $2"
+            return 1
+        fi
     else
-        if echo $line | grep '[\[\]]\+]' >/dev/null ; then
+        if echo $c1 | grep '[\[\]]\+]' >/dev/null ; then
             echo "The chars '[' and ']' are not allowed in paths"
             return 1
         fi
-        words_on_line=$(echo $line | wc | tr -s ' ' | cut -d ' ' -f 2)
-        if [[ $words_on_line != 2 ]] ; then
-            echo "There needs to be two paths on the line"
-            echo $line
+        if ! [ -z $c3 ] ; then
+            echo "Too many words on line"
             return 1
         fi
     fi
@@ -194,6 +198,7 @@ do
                 exit 1
             fi
             group_to_link=$optarg
+            shift
             ;;
         -f|--file)
             if [ -z $optarg ] ; then
