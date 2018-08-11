@@ -109,30 +109,6 @@ status()
 ################################################################################
 this_dir=$PWD
 
-################## VALIDATION There must be a Linkfile #########################
-if ! [ -e Linkfile ] ; then
-    echo "$cmd : ERROR : No Linkfile in PWD"
-    exit 1
-fi
-
-################## VALIDATION all source files must be links ###################
-if [[ "$1" != status ]] ; then
-    i=1
-    while read col1 extra ; do
-        if [[ "$col1" != \#* ]] ; then
-            the_target=$(eval echo $col1)
-            if [ -e $the_target ] && ! [ -L $the_target ] ; then
-                echo "$cmd : ERROR : Linkfile line $i : the_target=$col1 exists and is not a link"
-                errors=true
-            fi
-        fi
-        i=$(($i + 1))
-    done < Linkfile
-
-    if [[ $errors == true ]] ; then
-    exit
-    fi
-fi
 
 
 error_restore(){
@@ -148,6 +124,7 @@ exists_restore_files()
 ##################### Action based on presence of token file ###################
 
 action=status
+link_file=Linkfile
 while [[ $# -gt 0 ]]
 do
     option="$1"
@@ -158,7 +135,7 @@ do
                 echo "ERROR --file optarg empty"
                 exit 1
             fi
-            $Linkfile=$optarg
+            link_file=$optarg
             shift
             ;;
         forget)
@@ -195,7 +172,33 @@ do
     shift
 done
 
-if [ -e Linkfile ] ; then
+################## VALIDATION There must be a Linkfile #########################
+link_file=$PWD/$(basename $link_file)
+if ! [ -e $link_file ] ; then
+    echo "$cmd : ERROR : No \$PWD/$(basename $link_file)"
+    echo "Note that this tool wants you to be in the same directory as the linkfile even if you specify it on the command line"
+    exit 1
+fi
+
+################## VALIDATION all source files must be links ###################
+if [[ "$1" != status ]] ; then
+    i=1
+    while read col1 extra ; do
+        if [[ "$col1" != \#* ]] ; then
+            the_target=$(eval echo $col1)
+            if [ -e $the_target ] && ! [ -L $the_target ] ; then
+                echo "$cmd : ERROR : Linkfile line $i : the_target=$col1 exists and is not a link"
+                errors=true
+            fi
+        fi
+        i=$(($i + 1))
+    done < Linkfile
+
+    if [[ $errors == true ]] ; then
+        exit
+    fi
+fi
+if [ -e $Linkfile ] ; then
     ################# Iterateion on the lines of the file ##########################
     while read column_1 column_2 extra ; do
 
@@ -208,7 +211,7 @@ if [ -e Linkfile ] ; then
 
         ! [ -z $action ] && $action $the_target $the_my_file
 
-    done < Linkfile
+    done < $link_file
     exit 0
 
 elif ! [ -z "$linkfile" ] ; then
