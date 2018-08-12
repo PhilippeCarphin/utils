@@ -52,6 +52,21 @@ restore_target(){
 }
 
 ################################################################################
+# Delete restore files in PWD
+################################################################################
+delete_restore_files()
+{
+    restore_files=$(find . -name '.*.restore' -o -name '*.restore')
+
+    echo "$(tput setaf 1)Deleting restore files"
+    echo "$restore_files$(tput sgr 0)"
+    if $just_print ; then
+        return
+    fi
+    rm -f *.restore .*.restore
+}
+
+################################################################################
 # Create a link for the file if the target exitst in pwd
 ################################################################################
 maybe_link(){
@@ -82,8 +97,10 @@ unlink_target(){
         if $just_print ; then
            return
         fi
-        echo "$(tput setaf 284)DELETING link $target$(tput sgr 0)"
+        echo "$(tput setaf 1)DELETING link $target$(tput sgr 0)"
         rm -f $target
+    else
+        echo "$(tput setaf 2)"
     fi
 }
 
@@ -208,11 +225,16 @@ valid_line()
 action=status
 link_file=Linkfile
 just_print=false
+status_after=false
+initial_command_line="$@"
 while [[ $# -gt 0 ]]
 do
     option="$1"
     optarg="$2"
     case $option in
+        -s|--status-after)
+            status_after=true
+            ;;
         -jp|--just-print)
             just_print=true
             ;;
@@ -233,7 +255,7 @@ do
             shift
             ;;
         forget)
-            rm -f *.restore .*.restore
+            delete_restore_files
             exit 0
             ;;
         unlink)
@@ -340,6 +362,10 @@ elif ! [ -z "$linkfile" ] ; then
     fi
 else
     echo "$cmd : ERROR :No links array in script and no Linkfile in pwd"
+fi
+if $status_after ; then
+    echo "===== status after link-pwd $initial_command_line"
+    link-pwd status
 fi
 
 
