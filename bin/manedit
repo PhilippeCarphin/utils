@@ -1,0 +1,18 @@
+
+manual_to_edit=$1
+
+# NOTE : Option '--where' does not work on OSx
+man_link=$(man -w $manual_to_edit)
+
+# if ! $? ; then
+#      exit 1
+# fi
+
+man_file=$(readlink $man_link)
+filename=${man_file%%.man}
+org_file=$filename.org
+
+echo "man_file=$man_file"
+echo "filename=$filename"
+
+ec --no-wait $org_file
