@@ -10,6 +10,7 @@ elif [[ "$1" == "-s" ]] ; then
 elif [[ "$1" == "-r" ]] ; then
     emacsclient -e '(kill-emacs)'
     emacs --daemon
+    exit 0
 fi
 
 
