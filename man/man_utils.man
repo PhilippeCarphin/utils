@@ -1,0 +1,42 @@
+.TH "Utils" "1" 
+
+.SH "edit"
+.PP
+Opens file in terminal with either emacsclient if there is a server running or
+with vim.
+
+.PP
+Adds options \fI\-ct\fP to emacsclient
+
+.SH "ec"
+.PP
+Short for emacsclient.  Also has a couple options:
+
+.SS "-k Kill server"
+.RS
+.nf
+\fCemacsclient -e '(kill-emacs)'
+\fP
+.fi
+.RE
+
+.SS "-s Start server"
+.RS
+.nf
+\fCemacs --daemon
+\fP
+.fi
+.RE
+
+.SS "-r Restart server"
+.RS
+.nf
+\fCemacsclient -e '(kill-emacs)'
+emacs --daemon
+\fP
+.fi
+.RE
+
+.SH "manedit"
+.PP
+Follows link found by \fIman \-w $1\fP which is a \fI.man\fP file.  Opens the \fI.org\fP file.
