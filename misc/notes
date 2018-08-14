@@ -32,9 +32,16 @@ findFile()
 
     eval $notes_editor $files
 }
-
 # Trying it out:
-ec $notes_dir -c --no-wait
+no_wait=--no-wait
+for arg in $@ ; do
+    if [ $arg = -t ] ; then
+        no_wait=''
+    fi
+done
+
+ec $notes_dir -c $no_wait $@
+
 exit 0
 
 if pushd $notes_dir > /dev/null 2>&1 ; then
