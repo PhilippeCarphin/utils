@@ -3,3 +3,4 @@ $HOME/.local/bin/edit                bin/edit.sh
 $HOME/.local/bin/ecw                 bin/ecw.sh
 $HOME/.local/bin/ec                  bin/ec.sh
 $HOME/.local/man/man1/utils.1        man/man_utils.man
+$HOME/.local/bin/capture             bin/capture.sh
