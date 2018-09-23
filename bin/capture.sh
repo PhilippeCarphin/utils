@@ -1,3 +1,5 @@
 #!/bin/bash
 
-echo "** $@" > ~/Dropbox/GTD_Hub/GTD-IN_CLI.org
+if ! emacsclient -c -e '(org-capture)' 2>/dev/null; then
+   vim ~/Dropbox/Notes/gtd/GTD_InTray.org
+fi
