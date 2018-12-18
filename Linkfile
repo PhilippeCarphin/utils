@@ -6,3 +6,4 @@ $HOME/.local/man/man1/utils.1        man/man_utils.man
 $HOME/.local/bin/capture             bin/capture.sh
 $HOME/.local/bin/gtd                 bin/gtd.sh
 $HOME/.local/bin/mailtool            bin/mailtool.py
+$HOME/.local/bin/profile             bin/profile.sh
