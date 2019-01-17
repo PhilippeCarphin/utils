@@ -1,5 +1,11 @@
 #!/bin/bash
-source $PHILCONFIG/FILES/initutils
+
+# for at_cmc function
+if [ -z $PHILCONFIG ] ; then
+    source $PHIL_CONFIG/FILES/initutils
+else
+    source $PHILCONFIG/FILES/initutils
+fi
 
 if [[ "$1" == "-k" ]] ; then
     emacsclient -e '(kill-emacs)'

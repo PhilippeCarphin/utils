@@ -16,6 +16,7 @@ message_ = {
 
 message = json.dumps(message_)
 
+# https://developer.github.com/v3/repos/#create
 curl_cmd = ['curl', '-u', 'philippecarphin', '-d', message, 'https://api.github.com/user/repos']
 
 response = json.loads(subprocess.check_output(curl_cmd))

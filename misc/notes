@@ -10,6 +10,8 @@ else
     notes_dir="$PHIL_NOTES_DIR"
 fi
 
+emacsclient -t -e '(notes)'
+
 openFile()
 {
     if [ "$1" != "" ] ; then
