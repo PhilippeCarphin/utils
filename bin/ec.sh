@@ -20,17 +20,25 @@ elif [[ "$1" == "-r" ]] ; then
 fi
 
 
-terminal=false
-if at_cmc ; then
-   terminal=true
-fi
-
-if $terminal ; then
-   options="$options -t"
-fi
-
 if [[ -z $1 ]] ; then
-    emacsclient $options .
+    if at_cmc ; then
+        emacsclient -nw
+    else
+        emacsclient -c --no-wait -e '(spacemacs/switch-to-scratch-buffer)'
+    fi
 else
-    emacsclient $options $@
+    if at_cmc ; then
+        emacsclient -t $@
+    else
+        # Unless I specify "-t", always put -c --no-wait.
+        # I just always do it like that.
+        # Note the space in " $@", and also note that '"* -t"'
+        # doesn't work with either single or double quotes..
+        if [[ " $@" == *\ -t* ]] ; then
+            emacsclient $@
+        else
+            emacsclient -c --no-wait $@
+        fi
+    fi
 fi
+
