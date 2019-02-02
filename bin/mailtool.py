@@ -70,4 +70,5 @@ def test_send_cmc_command():
     send_cmc_command()
 if __name__ == "__main__":
     # test_send_mail()
-    test_send_cmc_command()
+    # test_send_cmc_command()
+    send_cmc_command()
