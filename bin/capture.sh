@@ -1,5 +1,10 @@
 #!/bin/bash
 
-if ! emacsclient -c -e '(org-capture)' 2>/dev/null; then
-   vim ~/Dropbox/Notes/gtd/GTD_InTray.org
+if [[ $1 == "--open-file" ]] ; then
+    open_file=t
+else
+    open_file=nil
 fi
+
+
+emacsclient -e "(org-capture-terminal-command $open_file)"
