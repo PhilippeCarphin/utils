@@ -58,6 +58,7 @@ def send_cmc_command():
     usage = "Fist argument : subject\nSecondArgument : content\n\n Message will be sent to my CMC address from my hotmail address"
     subject = ""
     content = ""
+    filename = ""
     try:
         subject = sys.argv[1]
     except IndexError:
@@ -70,10 +71,15 @@ def send_cmc_command():
         print("send_mail ERROR: Missing argument\n\n" + usage)
         quit()
 
+    try:
+        filename = sys.argv[3]
+    except IndexError:
+        pass
+
     send_mail(
         "phil103@hotmail.com",
         "philippe.carphin2@canada.ca",
-        subject, content)
+        subject, content, filename)
 
 def test_send_attachment():
     subject = 'Test of attachment'
@@ -99,5 +105,5 @@ def test_send_cmc_command():
 if __name__ == "__main__":
     # test_send_mail()
     # test_send_cmc_command()
-    # send_cmc_command()
-    test_send_attachment()
+    send_cmc_command()
+    # test_send_attachment()
