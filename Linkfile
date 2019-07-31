@@ -7,3 +7,4 @@ $HOME/.local/bin/gtd                 bin/gtd.sh
 $HOME/.local/bin/mailtool            bin/mailtool.py
 $HOME/.local/bin/profile             bin/profile.sh
 $HOME/.local/bin/create-repo         bin/create-repo
+$HOME/.local/bin/envfind             bin/env_find.py
