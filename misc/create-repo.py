@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import json
 import os
 import sys
@@ -17,14 +17,30 @@ message_ = {
 message = json.dumps(message_)
 
 # https://developer.github.com/v3/repos/#create
-curl_cmd = ['curl', '-u', 'philippecarphin', '-d', message, 'https://api.github.com/user/repos']
+with open(os.path.expanduser('~/.ssh/tokens/github_token.txt'), 'r') as f:
+    token = f.read()
+
+curl_cmd = ['curl', '-X', 'POST', '-H', f'Authorization: token {token}', '-d', message, 'https://api.github.com/user/repos']
+
+print(f'curl_cmd = {curl_cmd}')
+
+def request_successful(response):
+    if 'errors' in response:
+        return False
+    if 'message' in response:
+        # Some responses for failures don't have an 'errors' attribute
+        return False
+    return 'url' in response
 
 response = json.loads(subprocess.check_output(curl_cmd))
-
-if 'errors' in response:
+if not request_successful(response):
     print("Unable to create repository")
     pprint.pprint(response)
     quit(1)
+else:
+    print(f"Repo '{response['clone-url']}' created")
 
-subprocess.call(['git', 'remote', 'add', 'origin', 'https://github.com/philippecarphin/' + name])
-subprocess.call(['git', 'push', '-u', 'origin', 'master'])
+cmd = ['git', 'remote', 'add', 'origin', response['clone_url']]
+print(f"Adding repo: {' '.join(cmd)}")
+subprocess.call(cmd)
+# subprocess.call(['git', 'push', '-u', 'origin', 'master'])
