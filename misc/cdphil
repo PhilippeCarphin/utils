@@ -4,5 +4,8 @@
 # loop-tree continuously displays the contents (using tree) of the directory
 # named in ~/.philpwd.
 
-builtin cd $1
-echo $(pwd) > ~/.philpwd
+if ! builtin cd "$1" ; then
+    return
+fi
+
+pwd > ~/.philpwd
