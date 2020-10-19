@@ -5,6 +5,7 @@ import getpass
 import sys
 import mimetypes
 
+
 def add_attachment(m, attachment):
     ctype, encoding = mimetypes.guess_type(attachment)
     if ctype is None or encoding is not None:
@@ -12,11 +13,14 @@ def add_attachment(m, attachment):
         # use a generic bag-of-bits type.
         ctype = 'application/octet-stream'
     maintype, subtype = ctype.split('/', 1)
+
+    # Read the bytes of the file into the message object.
     with open(attachment, 'rb') as f:
         m.add_attachment(f.read(),
                          maintype=maintype,
                          subtype=subtype,
                          filename=attachment)
+
 
 def make_message_object(origin, destination, subject, content, attachment=None):
     m = EmailMessage()
@@ -28,22 +32,27 @@ def make_message_object(origin, destination, subject, content, attachment=None):
         add_attachment(m, attachment)
     return m
 
+
 def make_hotmail_connection():
-    from_smtp = 'smtp-mail.outlook.com'
+    # The SMTP host and port are things that I looked up for Microsoft Outlook.
+    from_smtp_host = 'smtp-mail.outlook.com'
+    from_smtp_port = 587
     from_address = 'phil103@hotmail.com'
     password = getpass.getpass('Say password for user {} : '.format(from_address))
 
-    s = smtplib.SMTP(from_smtp, 587 )
+    s = smtplib.SMTP(from_smtp_host, from_smtp_port)
     s.ehlo()
     s.starttls()
     s.ehlo()
     s.login(from_address, password)
     return s
 
+
 def send_mail(origin, destination, subject, content, attachment=None):
     hc = make_hotmail_connection()
     send_mail_connected(origin, destination, subject, content, hc, attachment)
     hc.quit()
+
 
 def send_mail_connected(origin, destination, subject, content, connection, attachment=None):
     message = make_message_object(origin, destination, subject, content, attachment)
@@ -81,6 +90,7 @@ def send_cmc_command():
         "philippe.carphin2@canada.ca",
         subject, content, filename)
 
+
 def test_send_attachment():
     subject = 'Test of attachment'
     content = 'This message should have mailtool.py as an attachmetn'
@@ -91,17 +101,22 @@ def test_send_attachment():
         subject, content, hotmail, 'mailtool.py')
     hotmail.quit()
 
+
 def resolve_nicknames(potential_nickname):
-    if potential_nickname in addresses:
-        return addresses[potential_nickname]
+    return adresses[potential_nickname] if potential_nickname in adresses else potential_nickname
+
 
 addresses = {
     "cmc": "philippe.carphin2@canada.ca",
     "hotmail": "phil103@hotmail.com",
     "poly": "philippe.carphin@polymtl.ca"
-    }
+}
+
+
 def test_send_cmc_command():
     send_cmc_command()
+
+
 if __name__ == "__main__":
     # test_send_mail()
     # test_send_cmc_command()
