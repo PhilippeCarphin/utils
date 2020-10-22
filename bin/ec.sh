@@ -25,24 +25,12 @@ function main(){
 
 
     if [[ -z $1 ]] ; then
-        if at_cmc ; then
-            emacsclient -nw
-        else
-            emacsclient -c --no-wait -e '(spacemacs/switch-to-scratch-buffer)'
-        fi
+        emacsclient -c --no-wait
     else
-        if at_cmc ; then
-            emacsclient -t $@
+        if [[ " $@" == *\ -t* ]] ; then
+            emacsclient $@
         else
-            # Unless I specify "-t", always put -c --no-wait.
-            # I just always do it like that.
-            # Note the space in " $@", and also note that '"* -t"'
-            # doesn't work with either single or double quotes..
-            if [[ " $@" == *\ -t* ]] ; then
-                emacsclient $@
-            else
-                emacsclient -c --no-wait $@
-            fi
+            emacsclient -c --no-wait $@
         fi
     fi
 }
@@ -50,11 +38,10 @@ function main(){
 function kill_emacs_by_pid(){
     if [[ $(uname) == Darwin ]] ; then
         emacs_process=$(ps -aupcarphin| grep Emacs.app | grep -v grep)
-        emacs_pid=$(awk '{print $2;}' <<< $emacs_process)
     else
-        echo "Not implemented for linux"
-        exit 1
+        emacs_process=$(ps -aux | grep 'emacs --daemon' | grep -v grep)
     fi
+    emacs_pid=$(awk '{print $2;}' <<< $emacs_process)
 
     if [[ -z $emacs_process ]] ; then
         echo "No emacs process found"
