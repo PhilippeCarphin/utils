@@ -1,0 +1,6 @@
+stow -v -t $HOME/.local/bin -d $HOME/Documents/GitHub/utils -S bin
+stow -v -t $HOME/.local/bin -d $HOME/Documents/GitHub/ -S bin
+stow -v -t $HOME/.local/ -d $HOME/Documents/GitHub/ -D utils
+stow -v -t $HOME/.local/ -d $HOME/Documents/GitHub/ -S utils
+stow -v -t $HOME/.local/ -d $HOME/.local/packages/fish-shell/ -S fish-shell-3.1.2
+stow -t $HOME/fs/ -d $HOME/fs/packages/fish-shell/ -D fish-shell-3.1.2

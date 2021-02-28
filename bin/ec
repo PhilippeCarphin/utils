@@ -1,21 +1,40 @@
 #!/bin/bash
 
 function main(){
-    if [[ "$1" == "-k" ]] ; then
+  case "$1" in
+    -k)
         emacsclient -e '(kill-emacs)'
         exit 0
-    elif [[ "$1" == -K ]] ; then
+        ;;
+    -K)
         kill_emacs_by_pid
         exit 0
-    elif [[ "$1" == "-s" ]] ; then
+        ;;
+    -s)
         emacs --daemon
         exit 0
-    elif [[ "$1" == "-r" ]] ; then
+        ;;
+    -r)
         emacsclient -e '(kill-emacs)'
         emacs --daemon
         exit 0
-    fi
-
+        ;;
+    -rs)
+        emacsclient -e '(kill-emacs)'
+        emacs --daemon
+        shift
+        ;;
+    -sshc)
+        shift
+        ssh -t apt-imac "/usr/local/bin/emacsclient -t ~/CloudStation/gtd/GTD_InTray.org"
+        exit 0
+        ;;
+    -ssh)
+        shift
+        ssh -t apt-imac "/usr/local/bin/emacsclient -t $@"
+        exit 0
+        ;;
+  esac
 
     if [[ -z $1 ]] ; then
         emacsclient -c --no-wait
