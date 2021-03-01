@@ -35,20 +35,22 @@ function main(){
         exit 0
         ;;
     -co)
-	echo "imac"
-	ssh -t apt-imac "/usr/local/bin/emacsclient -nw"
-	echo "mini"
-	ssh -t mini "/usr/local/bin/emacsclient -nw"
-	# echo "frontal-rocks"
-	# ssh -t frontal-rocks "/usr/local/bin/emacsclient -nw"
-	# echo "silent-thunder"
-	# ssh -t silent-thunder "/usr/local/bin/emacsclient -nw"
-	exit 0
+	       echo "imac"
+	       ssh -t apt-imac "/usr/local/bin/emacsclient -nw"
+	       echo "mini"
+	       ssh -t mini "/usr/local/bin/emacsclient -nw"
+	       # echo "frontal-rocks"
+	       # ssh -t frontal-rocks "/usr/local/bin/emacsclient -nw"
+	       # echo "silent-thunder"
+	       # ssh -t silent-thunder "/usr/local/bin/emacsclient -nw"
+	       exit 0
+         ;;
      -fo)
-	echo "imac"
-	ssh -t apt-imac "cd .emacs.d ; git fetch ; git merge --ff-only"
-	echo "mini"
-	ssh -t mini "cd .emacs.d ; git fetch ; git merge --ff-only"
+	       echo "imac"
+	       ssh -t apt-imac "cd .emacs.d ; git fetch ; git merge --ff-only"
+	       echo "mini"
+	       ssh -t mini "cd .emacs.d ; git fetch ; git merge --ff-only"
+         ;;
   esac
 
     if [[ -z $1 ]] ; then
