@@ -38,7 +38,7 @@ function main(){
 	       echo "imac"
 	       ssh -t apt-imac "/usr/local/bin/emacsclient -nw"
 	       echo "mini"
-	       ssh -t mini "/usr/local/bin/emacsclient -nw"
+	       ssh -t mini "/opt/homebrew/bin/emacsclient -nw"
 	       # echo "frontal-rocks"
 	       # ssh -t frontal-rocks "/usr/local/bin/emacsclient -nw"
 	       # echo "silent-thunder"
