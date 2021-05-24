@@ -21,7 +21,7 @@ def add_push_url(name, remote="origin", host="github.com", user="philippecarphin
 
 if not args.name:
     result = subprocess.run('basename $(git rev-parse --show-toplevel)',
-    shell=True, stdout=subprocess.PIPE, text=True, check=True)
+    shell=True, stdout=subprocess.PIPE, universal_newlines=True, check=True)
     args.name=result.stdout.strip()
 
 
