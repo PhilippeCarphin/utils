@@ -3,10 +3,10 @@
 script_dir=$(dirname $0)
 
 echo script_dir=$script_dir
-codes_file=$script_dir/../misc/color-codes
+codes_file=$script_dir/../libexec/philutils/color-codes
 if ! [ -e $codes_file ] ; then
     echo "$0 : generating codes_file"
-    echo "$script_dir/make-color-codes.sh > $codes_file"
-    $script_dir/make-color-codes.sh > $codes_file
+    echo "$script_dir/../libexec/philutils/make-color-codes.sh > $codes_file"
+    $script_dir/../libexec/philutils/make-color-codes.sh > $codes_file
 fi
 cat $codes_file
