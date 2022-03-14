@@ -2,3 +2,4 @@
 *.html
 *.restore
 __pycache__
+localinstall
