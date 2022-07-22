@@ -16,7 +16,7 @@ reformat_number () {
 
 print_code(){
     code=$1
-    echo -n "$(tput setab $code)$(reformat_number $code)$(tput sgr 0)"
+    printf "\033[48;5;${code}m$(reformat_number $code)\033[0m"
 }
 
 ################################################################################
@@ -28,7 +28,7 @@ row () {
     for ((j=$i0;j<$i1;j++)) ; do
         print_code $j
     done
-    echo $(tput sgr 0)
+    printf "\033[0m\n"
 }
 
 ################################################################################
@@ -43,7 +43,7 @@ rectangle () {
             code=$(($upper_left + ($M * $i) + $j))
             print_code $code
         done
-        echo $(tput sgr 0)
+        printf "\033[0m\n"
     done
 }
 
@@ -54,17 +54,17 @@ rectangle () {
 list() {
     start=$1
     finish=$2
-    for ((i=$start; i<$finish; i++)) ; do
-        print_code $i
-        echo -n $(tput setaf $i)"lorem ipsup"$(tput sgr 0)
-        echo -n $(tput setaf 0)
-        print_code $i
+    for ((i=$start; i<=$finish; i++)) ; do
+        echo -n "${i} : "$'\033['${i}mlorem ipsum$'\033[0m'
         echo ""
     done
 }
 
 ############################ PRINTING SEQUENCE #################################
 echo "
+Using \033[48;5;\${code}\033[0m with code in [16,231] = 16 + (36r + 6g + b)
+with r,g,b in [0,5]
+
            blue
 red|00 5f 87 af d7 ff|"
 for ul in 16 52 88 124 160 196 ; do
@@ -72,12 +72,18 @@ for ul in 16 52 88 124 160 196 ; do
     echo -n  "$red :"
     row $ul $(($ul + 36))
 done
-echo "\
-    \________________/\________________/\________________/\________________/\________________/\________________/
+echo '    \________________/\________________/\________________/\________________/\________________/\________________/
 green       00                5f                87                af                d7                ff
-"
+'
 
 rectangle 232 4 6
 echo ""
 
-list 0 16
+printf "\033[4mBasic colors\033[0m\n"
+list 30 37
+printf "\033[4mBasic background\033[0m\n"
+list 40 47
+printf "\033[4mBright background\033[0m\n"
+list 90 97
+printf "\033[4mBright background\033[0m\n"
+list 100 107
