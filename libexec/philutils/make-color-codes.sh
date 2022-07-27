@@ -62,7 +62,7 @@ list() {
 
 ############################ PRINTING SEQUENCE #################################
 echo "
-Using \033[48;5;\${code}\033[0m with code in [16,231] = 16 + (36r + 6g + b)
+Printing each code as 'printf \"\033[48;5;\${code}m\${zero_padded_code}\033[0m\"' with code in [16,231] = 16 + (36r + 6g + b)
 with r,g,b in [0,5]
 
            blue
