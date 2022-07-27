@@ -3,7 +3,7 @@
 ################################################################################
 # Pads to three digits by adding leading '0's
 ################################################################################
-reformat_number () {
+zero-pad-to-3-digits () {
     number=$1
     if (($number < 10)) ; then
         echo 00$number
@@ -16,7 +16,7 @@ reformat_number () {
 
 print_code(){
     code=$1
-    printf "\033[48;5;${code}m$(reformat_number $code)\033[0m"
+    printf "\033[48;5;${code}m$(zero-pad-to-3-digits $code)\033[0m"
 }
 
 ################################################################################
