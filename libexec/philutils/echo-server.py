@@ -53,7 +53,7 @@ args = get_args()
 if args.curl_notes:
     print("""Example request:
 
-    curl http://0.0.0.0:5447/asdf -X POST --http0.9 -H "Content-Type: application/json" -d '{"message": "HELLO WORLD","foo":"bar"}'
+    curl http://0.0.0.0:5447/asdf -X POST -H "Content-Type: application/json" -d '{"message": "HELLO WORLD","foo":"bar"}'
 
 - Use `-X [POST,GET,PUT,DELETE]` to select the request type
 
