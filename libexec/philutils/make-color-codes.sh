@@ -1,6 +1,46 @@
 #!/bin/bash
 
 ################################################################################
+# Main function called at end of this script
+################################################################################
+main(){
+
+    print-cube
+
+    rectangle 232 4 6
+    echo ""
+
+    printf "\033[4mBasic colors\033[0m\n"
+    list 30 37
+    printf "\033[4mBasic background\033[0m\n"
+    list 40 47
+    printf "\033[4mBright background\033[0m\n"
+    list 90 97
+    printf "\033[4mBright background\033[0m\n"
+    list 100 107
+}
+
+################################################################################
+# Prints the color cube
+################################################################################
+print-cube() {
+    echo "
+Printing each code as 'printf \"\033[48;5;\${code}m\${zero_padded_code}\033[0m\"\' with code in [16,231] = 16 + (36r + 6g + b)
+with r,g,b in [0,5]
+
+           blue
+red|00 5f 87 af d7 ff|"
+    for ul in 16 52 88 124 160 196 ; do
+        case $ul in 16) red=00 ;; 52) red=5f;; 88)red=87;; 124)red=af;; 160)red=d7;; 196)red=ff;; esac
+        echo -n  "$red :"
+        row $ul $(($ul + 36))
+    done
+    echo '    \________________/\________________/\________________/\________________/\________________/\________________/
+green       00                5f                87                af                d7                ff
+'
+}
+
+################################################################################
 # Pads to three digits by adding leading '0's
 ################################################################################
 zero-pad-to-3-digits () {
@@ -55,35 +95,10 @@ list() {
     start=$1
     finish=$2
     for ((i=$start; i<=$finish; i++)) ; do
-        echo -n "${i} : "$'\033['${i}mlorem ipsum$'\033[0m'
-        echo ""
+        #echo -n "${i} : "$'\033['${i}mlorem ipsum$'\033[0m'
+        printf "${i} : \033[${i}mlorem ipsum\033[0m\n"
+        # echo ""
     done
 }
 
-############################ PRINTING SEQUENCE #################################
-echo "
-Printing each code as 'printf \"\033[48;5;\${code}m\${zero_padded_code}\033[0m\"' with code in [16,231] = 16 + (36r + 6g + b)
-with r,g,b in [0,5]
-
-           blue
-red|00 5f 87 af d7 ff|"
-for ul in 16 52 88 124 160 196 ; do
-    case $ul in 16) red=00 ;; 52) red=5f;; 88)red=87;; 124)red=af;; 160)red=d7;; 196)red=ff;; esac
-    echo -n  "$red :"
-    row $ul $(($ul + 36))
-done
-echo '    \________________/\________________/\________________/\________________/\________________/\________________/
-green       00                5f                87                af                d7                ff
-'
-
-rectangle 232 4 6
-echo ""
-
-printf "\033[4mBasic colors\033[0m\n"
-list 30 37
-printf "\033[4mBasic background\033[0m\n"
-list 40 47
-printf "\033[4mBright background\033[0m\n"
-list 90 97
-printf "\033[4mBright background\033[0m\n"
-list 100 107
+main
