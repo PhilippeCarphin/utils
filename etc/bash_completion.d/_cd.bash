@@ -25,16 +25,16 @@
 # ':' to follow the use of the ':' magic pathspec in git.
 ################################################################################
 git_cd(){
-    local repo_subdir
-    local repo_dir
+    local -r colon_path="${1}"
 
-    if [[ "${1}" != :* ]] ; then
+
+    if [[ "${colon_path}" != :* ]] ; then
         printf "${FUNCNAME[0]}: \033[1;31mERROR\033[0m: Path must begin with a ':'\n"
         return 1
     fi
 
-    repo_subdir="${1##:}"
-
+    local -r repo_subdir="${colon_path##:}"
+    local repo_dir
     if ! repo_dir="$(git rev-parse --show-toplevel)" ; then
         printf "${FUNCNAME[0]}: \033[1;31mERROR\033[0m: $(pwd) see above\n"
         return 1
@@ -42,7 +42,7 @@ git_cd(){
 
     local dir=${repo_dir}${repo_subdir}
     if ! builtin cd "$dir"; then
-        printf "${FUNCNAME[0]}: \033[1;31mERROR\033[0m: ${1} see above\n"
+        printf "${FUNCNAME[0]}: \033[1;31mERROR\033[0m: ${colon_path} see above\n"
         return 1
     fi
 
@@ -110,7 +110,8 @@ _git_cd(){
 # or to builtin cd otherwise.
 ################################################################################
 cd_and_git_cd(){
-    case "${1}" in
+    local -r path_or_colon_path="${1}"
+    case "${path_or_colon_path}" in
         :*) git_cd "$@" ;;
         *) builtin cd "$@" ;;
     esac
