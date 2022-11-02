@@ -5,7 +5,7 @@
 
 vc(){
     local file
-    if file=$(which ${1} 2>/dev/null) ; then
+    if file=$(command which ${1} 2>/dev/null) ; then
         vim ${file}
     else
         echo "no '${1}' found in path, looking for shell function"
@@ -55,7 +55,7 @@ _open_shell_function(){
     local candidates=( $(compgen -c ${cur}) )
     local i=0
     for c in "${candidates[@]}" ; do
-        if ! which ${c} &>/dev/null ; then
+        if ! command which ${c} &>/dev/null ; then
             COMPREPLY[i++]=${c}
         fi
     done
@@ -64,7 +64,7 @@ _open_shell_function(){
 
 whence()(
     local file
-    if ! file=$(which ${1} 2>/dev/null) ; then
+    if ! file=$(command which ${1} 2>/dev/null) ; then
         declare -F ${1}
     fi
     type ${1}
