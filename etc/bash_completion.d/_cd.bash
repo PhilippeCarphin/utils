@@ -109,7 +109,7 @@ _git_cd(){
 # Switching function that delegates to git_cd if the argument starts with ':'
 # or to builtin cd otherwise.
 ################################################################################
-__cd_and_git_cd(){
+__cd_or_git_cd(){
     local -r path_or_colon_path="${1}"
     case "${path_or_colon_path}" in
         :*) __git_cd "$@" ;;
@@ -121,13 +121,13 @@ __cd_and_git_cd(){
 # Switching function that delegates to _git_cd if completing a word that begins
 # with ':' or to _cd (completion function for cd) otherwise.
 ################################################################################
-_cd_and_git_cd(){
+_cd_or_git_cd(){
     case "${COMP_WORDS[1]}" in
         :*) _git_cd ;;
         *) _cd ;;
     esac
 }
 
-alias cd=__cd_and_git_cd
+alias cd=__cd_or_git_cd
 complete -o nospace -F _git_cd git_cd
-complete -o nospace -F _cd_and_git_cd cd
+complete -o nospace -F _cd_or_git_cd cd
