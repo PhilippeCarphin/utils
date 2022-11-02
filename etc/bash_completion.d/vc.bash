@@ -4,12 +4,13 @@
 #
 
 vc(){
+    local -r cmd="${1}"
     local file
-    if file=$(command which ${1} 2>/dev/null) ; then
+    if file=$(command which ${cmd} 2>/dev/null) ; then
         vim ${file}
     else
-        echo "no '${1}' found in path, looking for shell function"
-        open_shell_function "${1}"
+        echo "no '${cmd}' found in path, looking for shell function"
+        open_shell_function "${cmd}"
     fi
 }
 
@@ -18,7 +19,7 @@ vc(){
 ################################################################################
 open_shell_function()(
 
-    local shell_function="${1}"
+    local -r shell_function="${1}"
 
     #
     # The extdebug setting causes `declare -F ${shell_function}` to print
@@ -27,21 +28,21 @@ open_shell_function()(
     #
     shopt -s extdebug
 
-    local info=$(declare -F ${1})
+    local info=$(declare -F ${shell_function})
     if [[ -z "${info}" ]] ; then
-        echo "No info from 'declare -F' for '${1}'"
+        echo "No info from 'declare -F' for '${shell_function}'"
         return 1
     fi
 
     local lineno
     if ! lineno=$(echo ${info} | cut -d ' ' -f 2) ; then
-         echo "Error getting line number from info '${info}' on '${1}'"
+         echo "Error getting line number from info '${info}' on '${shell_function}'"
          return 1
     fi
 
     local file
     if ! file=$(echo ${info} | cut -d ' ' -f 3) ; then
-        echo "Error getting filename from info '${info}' on '${1}'"
+        echo "Error getting filename from info '${info}' on '${shell_function}'"
         return 1
     fi
 
@@ -63,11 +64,15 @@ _open_shell_function(){
 
 
 whence()(
+
+    local -r cmd="${1}"
+
+    shopt -s extdebug
     local file
-    if ! file=$(command which ${1} 2>/dev/null) ; then
-        declare -F ${1}
+    if ! file=$(command which ${cmd} 2>/dev/null) ; then
+        declare -F ${cmd}
     fi
-    type ${1}
+    type ${cmd}
 )
 
 complete -c vc whence
