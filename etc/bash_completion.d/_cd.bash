@@ -24,7 +24,7 @@
 # Change directory relative to the root of the git repo.  Paths must start with
 # ':' to follow the use of the ':' magic pathspec in git.
 ################################################################################
-git_cd(){
+__git_cd(){
     local -r colon_path="${1}"
 
 
@@ -109,10 +109,10 @@ _git_cd(){
 # Switching function that delegates to git_cd if the argument starts with ':'
 # or to builtin cd otherwise.
 ################################################################################
-cd_and_git_cd(){
+__cd_and_git_cd(){
     local -r path_or_colon_path="${1}"
     case "${path_or_colon_path}" in
-        :*) git_cd "$@" ;;
+        :*) __git_cd "$@" ;;
         *) builtin cd "$@" ;;
     esac
 }
@@ -128,6 +128,6 @@ _cd_and_git_cd(){
     esac
 }
 
-alias cd=cd_and_git_cd
+alias cd=__cd_and_git_cd
 complete -o nospace -F _git_cd git_cd
-complete -o nospace -F _cd_and_git_cd cd_and_git_cd cd
+complete -o nospace -F _cd_and_git_cd cd
