@@ -8,6 +8,9 @@ vc(){
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
         vim ${file}
+    elif file="$(find $(echo $PATH | tr ':' ' ') -name "${cmd}")" ; then
+        echo "file='${file}'"
+        vim ${file}
     else
         echo "no '${cmd}' found in path, looking for shell function"
         open_shell_function "${cmd}"
@@ -67,12 +70,15 @@ whence()(
 
     local -r cmd="${1}"
 
-    shopt -s extdebug
     local file
-    if ! file=$(command which ${cmd} 2>/dev/null) ; then
+    if file=$(command which ${cmd} 2>/dev/null) ; then
+        echo "${file}"
+    elif file="$(find $(echo $PATH | tr ':' ' ') -name "${cmd}")" ; then
+        echo ${file}
+    else
+        shopt -s extdebug
         declare -F ${cmd}
     fi
-    type ${cmd}
 )
 
 complete -c vc whence
