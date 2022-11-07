@@ -4,30 +4,44 @@
 # Main function called at end of this script
 ################################################################################
 main(){
+    echo "============= Basic colors : \033[<n>m ======================="
+    printf "\033[4mBasic foreground\033[0m\n"
+    list 30 37
+    printf "\033[4mBright basic foreground\033[0m\n"
+    list 40 47
+    printf "\033[4mBasic background\033[0m\n"
+    list 90 97
+    printf "\033[4mBright basic background\033[0m\n"
+    list 100 107
 
+    echo "============= 8 bit color : \033[48;5;<n>m ======================="
+    echo "The same color can be set for the foreground using \033[38;5;<n>m"
+
+    echo "============= 6x6x6 cube"
     print-cube
 
+    echo "============= Grayscale values"
     rectangle 232 4 6
-    echo ""
 
-    printf "\033[4mBasic colors\033[0m\n"
-    list 30 37
-    printf "\033[4mBasic background\033[0m\n"
-    list 40 47
-    printf "\033[4mBright background\033[0m\n"
-    list 90 97
-    printf "\033[4mBright background\033[0m\n"
-    list 100 107
+    echo "============= Basic 16 colors"
+    echo "Same as \033[<30-37>m for foreground and \033[<40-47>m for background"
+    row 0 8  # +1 because row does ${1} <= x < ${2}
+    echo "Same as \033[<90-97>m for foreground and \033[<100-107>m for background"
+    row 8 16
+
 }
-
 ################################################################################
 # Prints the color cube
 ################################################################################
 print-cube() {
-    echo "
-Printing each code as 'printf \"\033[48;5;\${code}m\${zero_padded_code}\033[0m\"\' with code in [16,231] = 16 + (36r + 6g + b)
-with r,g,b in [0,5]
+    echo "Printing each code as 'printf \"\033[48;5;\${code}m\${zero_padded_code}\033[0m\"\'
+with code in [16,231] = 16 + (36r + 6g + b) with r,g,b in [0,5].  Note that the RGB values
+0x00(0), 0x5f(95), 0x87(135), 0xaf(175), 0xd7(215), 0xff(255) are not evenly spaced.
+The jumps are 95, 40, 40, 40, 40."
+# Maybe https://www.ditig.com/256-colors-cheat-sheet
+# http://www.calmar.ws/vim/256-xterm-24bit-rgb-color-chart.html
 
+echo "
            blue
 red|00 5f 87 af d7 ff|"
     for ul in 16 52 88 124 160 196 ; do
