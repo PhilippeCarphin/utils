@@ -8,12 +8,15 @@ vc(){
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
         vim ${file}
-    elif file="$(find $(echo $PATH | tr ':' ' ') -name "${cmd}")" ; then
-        echo "file='${file}'"
-        vim ${file}
     else
-        echo "no '${cmd}' found in path, looking for shell function"
-        open_shell_function "${cmd}"
+        file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" -type f)"
+        if [[ -n "${file}" ]] ; then
+            echo ${file}
+            vim ${file}
+        else
+            echo "${FUNCNAME[0]}: no '${cmd}' found in path, looking for shell function"
+            open_shell_function "${cmd}"
+        fi
     fi
 }
 
@@ -73,11 +76,14 @@ whence()(
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
         echo "${file}"
-    elif file="$(find $(echo $PATH | tr ':' ' ') -name "${cmd}")" ; then
-        echo ${file}
     else
-        shopt -s extdebug
-        declare -F ${cmd}
+        file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" -type f)"
+        if [[ -n "${file}" ]] ; then
+            echo ${file}
+        else
+            shopt -s extdebug
+            declare -F ${cmd}
+        fi
     fi
 )
 
