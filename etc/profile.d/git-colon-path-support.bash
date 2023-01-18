@@ -108,11 +108,17 @@ __complete_git_colon_paths(){
         #      So I'm keeping the duplicate removal because it is easier
         #      to think about 
         if ((${#COMPREPLY[@]} == 1)) ; then
-            if [[ -d ${git_repo}${COMPREPLY[0]} ]] ; then
+            # Do this eval to resolve any ~/ or ~USER/
+            local one_candidate=$(eval echo ${COMPREPLY[0]})
+            if [[ -d ${one_candidate} ]] ; then
                 COMPREPLY[0]+=/;
+                one_candidate+=/
             fi
-            # In completions 
-            if [[ $(find ${COMPREPLY[0]} -maxdepth 1 -type d) == ${COMPREPLY[0]} ]] ; then
+            local find_opt
+            if [[ ${compgen_opt} == "-d" ]] ; then
+                find_opt=(-type d)
+            fi
+            if [[ "$(find ${one_candidate} -maxdepth 1 "${find_opt[@]}")" == ${one_candidate} ]] ; then
                 compopt +o filenames
             fi
         fi;
