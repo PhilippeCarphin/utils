@@ -121,7 +121,12 @@ __complete_git_colon_paths(){
             if [[ "$(find ${one_candidate} -maxdepth 1 "${find_opt[@]}")" == ${one_candidate} ]] ; then
                 compopt +o filenames
             fi
-        fi;
+        elif ((${#COMPREPLY[@]} == 0)) ; then
+            if [[ -e "$(eval echo ${cur})" ]] ; then
+                COMPREPLY=(${cur})
+                compopt +o filenames
+            fi
+        fi
     else
 
         if ! git_repo="$(git rev-parse --show-toplevel 2>/dev/null)" ; then
