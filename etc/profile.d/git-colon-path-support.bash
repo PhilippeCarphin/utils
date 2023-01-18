@@ -80,7 +80,10 @@ __complete_git_colon_paths(){
 
     if [[ "${cur}" != ':' ]] && [[ "${prev}" != : ]] ; then
         _filedir ${filedir_opt}
-        echo "COMPREPLY: (${COMPREPLY[@]})" >&${BASH_XTRACEFD}
+        if [[ -n ${BASH_XTRACEFD} ]] ; then
+            echo "COMPREPLY: (${COMPREPLY[@]})" >&${BASH_XTRACEFD}
+        fi
+
         # filedir without the -d option can give duplicates
         # and I want to be able to do 'vim somedir/empty' and
         # have a space added to indicate to me that the directory
