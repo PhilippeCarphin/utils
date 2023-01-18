@@ -152,7 +152,11 @@ __complete_git_colon_paths(){
             if [[ -d ${git_repo}${COMPREPLY[0]} ]] ; then
                 COMPREPLY[0]+=/;
             fi
-            if ! [[ $(find ${full_path} -maxdepth 1 -type d) == ${full_path} ]] ; then
+            local find_opt
+            if [[ ${compgen_opt} == "-d" ]] ; then
+                find_opt=(-type d)
+            fi
+            if ! [[ $(find ${full_path} -maxdepth 1 "${find_opt[@]}") == ${full_path} ]] ; then
                 compopt -o nospace
             fi
         fi;
