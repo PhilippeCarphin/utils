@@ -5,13 +5,13 @@
 ################################################################################
 main(){
     echo "============= Basic colors : \033[<n>m ======================="
-    printf "\033[4mBasic foreground\033[0m\n"
+    printf "\033[4mBasic Foreground\033[0m\n"
     list 30 37
-    printf "\033[4mBright basic foreground\033[0m\n"
+    printf "\033[4mBasic Background\033[0m\n"
     list 40 47
-    printf "\033[4mBasic background\033[0m\n"
+    printf "\033[4mBright Basic Foreground\033[0m\n"
     list 90 97
-    printf "\033[4mBright basic background\033[0m\n"
+    printf "\033[4mBright Basic Background\033[0m\n"
     list 100 107
 
     echo "============= 8 bit color : \033[48;5;<n>m ======================="
