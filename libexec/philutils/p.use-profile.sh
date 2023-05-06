@@ -31,6 +31,15 @@ p.base-env(){
     echo "DISPLAY=$DISPLAY"
 }
 
+escape_symbols(){
+    #
+    # It looks like my ssh command for getting the base_env sources my BASHRC
+    #
+    sed \
+        -e 's|(|\\(|' \
+        -e 's|)|\\)|'
+}
+
 p.use-profile(){
     if [[ "$1" == '--help' ]] || [[ "$1" == "-h" ]] || [[ "$1" == "" ]] ; then
         _p.use-profile-usage "$@"
@@ -42,7 +51,17 @@ p.use-profile(){
         echo "${FUNCNAME[0]} : ERROR : Could not cd to '$userdir'"
         return 1
     fi
-    eval env -i "$(p.base-env 2>/dev/null | tr '\n' ' ')" USER=$username HOME=$userdir bash -l
+
+    local old_ifs=${IFS}
+    local IFS=$'\n'
+    base_env=( $(p.base-env 2>/dev/null | escape_symbols ) )
+    IFS=${old_ifs}
+
+    for v in "${base_env[@]}" ; do
+        echo "var: '${v}'"
+    done
+
+    eval env -i "${base_env[@]}" USER=$username HOME=$userdir bash -l
     # eval env -i "$(p.base-env 2>/dev/null)" USER=$username HOME=$userdir bash -l
 }
 
