@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 _p.use-profile-usage(){
     echo "Usage : $0 USERNAME
 
@@ -24,11 +25,13 @@ _p.use-profile-usage(){
 }
 
 p.base-env(){
-    ssh localhost env | grep -v '^SSH\|^PWD\|^LANG=\|^LC_'
+    ssh localhost env | grep -v '^SSH\|^PWD\|^LANG=\|^LC_\|^LOGNAME=\|^USER=\|^HOME='
     echo "SSH_CONNECTION=\"$SSH_CONNECTION\""
     echo "SSH_CLIENT=\"$SSH_CLIENT\""
     echo "TERM=$TERM"
-    echo "DISPLAY=$DISPLAY"
+    if [[ -v DISPLAY ]] ; then
+        echo "DISPLAY=$DISPLAY"
+    fi
 }
 
 escape_symbols(){
@@ -45,6 +48,10 @@ p.use-profile(){
         _p.use-profile-usage "$@"
         return 1
     fi
+    if [[ "$1" == -d ]] ; then
+        dbg=-x
+        shift
+    fi
     local username=$1
     local userdir=$(eval echo ~$username)
     if ! cd $userdir 2>/dev/null ; then
@@ -55,13 +62,21 @@ p.use-profile(){
     local old_ifs=${IFS}
     local IFS=$'\n'
     base_env=( $(p.base-env 2>/dev/null | escape_symbols ) )
+    if [[ -v dbg ]] ; then
+        base_env+=( "PS4=$PS4" )
+    fi
     IFS=${old_ifs}
 
+    echo "${FUNCNAME[0]}: BASE ENVIRONMENT"
     for v in "${base_env[@]}" ; do
-        echo "var: '${v}'"
+        echo "    '${v}'"
     done
+    profile="$(dirname $0)/../libexec/philutils/etc-profile.sh"
 
-    eval env -i "${base_env[@]}" USER=$username HOME=$userdir bash -l
+    # env -i "${base_env[@]}" LOGNAME=${username} USER=$username HOME=$userdir bash -l
+    env -i "${base_env[@]}" \
+        LOGNAME=${username} USER=$username HOME=$userdir \
+        bash --init-file ${profile} ${dbg}
     # eval env -i "$(p.base-env 2>/dev/null)" USER=$username HOME=$userdir bash -l
 }
 
