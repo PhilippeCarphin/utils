@@ -25,16 +25,16 @@ pathmunge () {
 # Part that resets the USER and LOGNAME variables based on values returned
 # by the `id` command
 #
-#  if [ -x /usr/bin/id ]; then
-#      if [ -z "$EUID" ]; then
-#          # ksh workaround
-#          EUID=`/usr/bin/id -u`
-#          UID=`/usr/bin/id -ru`
-#      fi
-#      USER="`/usr/bin/id -un`"
-#      LOGNAME=$USER
-#      MAIL="/var/spool/mail/$USER"
-#  fi
+if [ -x /usr/bin/id ]; then
+    # if [ -z "$EUID" ]; then
+    #     # ksh workaround
+    #     EUID=`/usr/bin/id -u`
+    #     UID=`/usr/bin/id -ru`
+    # fi
+    ORIGINAL_USER="`/usr/bin/id -un`"
+    ORIGINAL_LOGNAME=$ORIGINAL_USER
+    # MAIL="/var/spool/mail/$USER"
+fi
 
 # Path manipulation
 if [ "$EUID" = "0" ]; then
@@ -46,6 +46,7 @@ else
 fi
 
 HOSTNAME=`/usr/bin/hostname 2>/dev/null`
+HISTFILE=$(eval echo ~${ORIGINAL_USER}/.alternate_history)
 HISTSIZE=1000
 if [ "$HISTCONTROL" = "ignorespace" ] ; then
     export HISTCONTROL=ignoreboth
@@ -89,6 +90,13 @@ fi
 
 echo "$HOME/.profile"
 source $HOME/.profile
-PS1="$(echo "$PS1" | sed 's/\\u/$USER/')"
+adapt_ps1(){
+    PS1="$(echo "$PS1" | sed 's/\\u/$USER/')"
+}
+if [[ -n "${PROMPT_COMMAND}" ]] ; then
+    PROMPT_COMMAND="${PROMPT_COMMAND};adapt_ps1"
+else
+    adapt_ps1
+fi
 # So that HOME shows up as `~` in prompt
 cd $HOME
