@@ -28,6 +28,9 @@ p.base-env(){
     ssh localhost env | grep -v '^SSH\|^PWD\|^LANG=\|^LC_\|^LOGNAME=\|^USER=\|^HOME='
     echo "SSH_CONNECTION=\"$SSH_CONNECTION\""
     echo "SSH_CLIENT=\"$SSH_CLIENT\""
+    if [[ -v USE_PROFILE_XTRACE ]] ; then
+        echo "USE_PROFILE_XTRACE=\"$USE_PROFILE_XTRACE\""
+    fi
     echo "TERM=$TERM"
     if [[ -v DISPLAY ]] ; then
         echo "DISPLAY=$DISPLAY"

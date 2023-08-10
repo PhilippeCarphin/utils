@@ -1,11 +1,26 @@
 #
-# This file is /etc/profile for use by `p.use-profile`.  It is used as
-# env -i <base env> USER=${username} LOGNAME=${username} HOME=${userdir} bash --init-file <this-file>
-# and this file ends with `source $HOME/.profile` to simulate a login shell.
-#
-# This is done instead of `bash -l` because with `-l`, it is hardcoded to source
-# the true /etc/profile which resets $USER and $LOGNAME to values determined
-# with the `id` command which cannot be faked.
+# p.use-profile runs 'bash --init-file <THIS FILE>' which does three main things:
+# 1. This file has the contents of /etc/profile.sh for two reasons
+#    a) The '--init-file' flag causes it to not be sourced, so its contents are
+#       reproduced here.
+#    b) The original /etc/profile sets the USER and LOGNAME variables using the
+#       'id' command which lessens the illusion of being the other user.  When
+#       troubleshooting another user's profile, it is important that USER be the
+#       username of the other user because they may have '$USER' somewhere in
+#       what we are troubleshooting.
+# 2. Load extra tools from to help with troubleshooting
+#    a) vc: Find and open either a script from PATH or the file defining a shell
+#       function
+#    b) whence: A supercharged 'which' command that either returns the full path
+#       of a command in $PATH (what 'which' does) or the path and line number
+#       where a shell function is defined.
+#    c) TODO: Add a function to dump the other user's environment to a file
+#       like p.env(){ env -0 | sort -z | tr '\0' '\n' ; }
+# 3. Source the other user's ~/.profile.  Because we use the --init-file flag
+#    get full control of the startup, the other user's ~/.profile does not get
+#    sourced automatically even if we add '-l' or '--login'.  The '--login' flag
+#    is still given to the BASH command but that is only so that $- will contain
+#    the letter 'l'
 #
 
 pathmunge () {
@@ -33,6 +48,7 @@ if [ -x /usr/bin/id ]; then
     # fi
     ORIGINAL_USER="`/usr/bin/id -un`"
     ORIGINAL_LOGNAME=$ORIGINAL_USER
+    ORIGINAL_HOME="$(eval echo ~$ORIGINAL_USER)"
     # MAIL="/var/spool/mail/$USER"
 fi
 
@@ -88,13 +104,23 @@ if [ -n "${BASH_VERSION-}" ] ; then
        fi
 fi
 
+
 echo "$HOME/.profile"
+if [[ -v USE_PROFILE_XTRACE ]] ; then
+    export PS4='+ \033[35m[${BASH_SOURCE[0]}:${LINENO}]\033[0m '
+    set -x
+fi
+
+package_dir="$(cd "$(dirname $0)/.." && pwd)"
+if [[ -f "${package_dir}/etc/profile.d/vc.bash" ]] ; then
+    source "${package_dir}/etc/profile.d/vc.bash"
+fi
 source $HOME/.profile
-adapt_ps1(){
+p.use-profile.adapt_ps1(){
     PS1="$(echo "$PS1" | sed 's/\\u/$USER/')"
 }
 if [[ -n "${PROMPT_COMMAND}" ]] ; then
-    PROMPT_COMMAND="${PROMPT_COMMAND};adapt_ps1"
+    PROMPT_COMMAND="${PROMPT_COMMAND};p.use-profile.adapt_ps1"
 else
     adapt_ps1
 fi
