@@ -2,13 +2,20 @@
 
 case "$1" in
     -h|--help)
-        printf "USAGE: $0 FILE CMD ...
-FILE: File to watch for changes on.
+        printf "USAGE: $0 FILE(s) CMD ...
+FILE: File to watch for changes on as a COMMA separated list
 CMD: Command to run when FILE is updated.  CMD is eval'd\n"
         exit 0
         ;;
 esac
-file=$1; shift
+saved_ifs="${IFS}"
+IFS="${IFS},;"
+files=($1)
+shift
+IFS="${saved_ifs}"
+for f in "${files[@]}" ; do
+    echo "f='${f}'"
+done
 
 #
 # Tested with VIM.  The inotifywait command takes a file name but it looks
@@ -19,7 +26,10 @@ file=$1; shift
 # does work because with every event, we relaunch inotifywait.
 #
 while true ; do
-    event=$(inotifywait -q ${file})
+    if ! event=$(inotifywait -q "${files[@]}") ; then
+        echo "Error in inotifywait command"
+        exit 1
+    fi
     printf "==== event : \033[35m${event}\033[0m ====\n"
     printf "running \033[1m$*\033[0m\n"
     eval "$@"
