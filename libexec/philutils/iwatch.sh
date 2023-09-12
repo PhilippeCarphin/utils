@@ -3,13 +3,14 @@
 case "$1" in
     -h|--help)
         printf "USAGE: $0 FILE(s) CMD ...
-FILE: File to watch for changes on as a COMMA separated list
+FILE: File to watch for changes on as a COMMA separated list or separated by other IFS chars
 CMD: Command to run when FILE is updated.  CMD is eval'd\n"
         exit 0
         ;;
 esac
 saved_ifs="${IFS}"
-IFS="${IFS},;"
+IFS="${IFS},"
+echo "\$1='$1'"
 files=($1)
 shift
 IFS="${saved_ifs}"
