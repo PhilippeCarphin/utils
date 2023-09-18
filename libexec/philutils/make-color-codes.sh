@@ -40,6 +40,9 @@ with code in [16,231] = 16 + (36r + 6g + b) with r,g,b in [0,5].  Note that the 
 The jumps are 95, 40, 40, 40, 40."
 # Maybe https://www.ditig.com/256-colors-cheat-sheet
 # http://www.calmar.ws/vim/256-xterm-24bit-rgb-color-chart.html
+# code-16 % 36 is the left-right index
+# code-16 / 36 is the vertical index
+# (code-16) % 6 is the inner horizontal index
 
 echo "
            blue
@@ -69,8 +72,22 @@ zero-pad-to-3-digits () {
 }
 
 print_code(){
-    code=$1
-    printf "\033[48;5;${code}m$(zero-pad-to-3-digits $code)\033[0m"
+
+    local code=$1
+    if (( code <= 255 )) && (( 232 <= code)) ; then
+        if (( 248 <= code )) && (( code <= 255 )) ; then
+            fg=$'\033[38;5;0m'
+        else
+            fg=$'\033[38;5;15m'
+        fi
+    else
+        if (( 24 <= ((code - 16) % 36) )) ; then
+            fg=$'\033[38;5;0m'
+        else
+            fg=$'\033[38;5;15m'
+        fi
+    fi
+    printf "\033[48;5;${code}m${fg}$(zero-pad-to-3-digits ${code} )\033[0m"
 }
 
 ################################################################################
