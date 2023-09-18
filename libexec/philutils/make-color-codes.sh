@@ -61,7 +61,7 @@ green       00                5f                87                af            
 # Pads to three digits by adding leading '0's
 ################################################################################
 zero-pad-to-3-digits () {
-    number=$1
+    local number=$1
     if (($number < 10)) ; then
         echo 00$number
     elif (( $number < 100 )) ; then
@@ -94,8 +94,8 @@ print_code(){
 # Prints a row of color codes from i0 to i1
 ################################################################################
 row () {
-    i0=$1
-    i1=$2
+    local i0=$1
+    local i1=$2
     for ((j=$i0;j<$i1;j++)) ; do
         print_code $j
     done
@@ -106,9 +106,9 @@ row () {
 # Prints a rectangle of codes
 ################################################################################
 rectangle () {
-    upper_left=$1
-    M=$2
-    N=$3
+    local upper_left=$1
+    local M=$2
+    local N=$3
     for ((i=0;i<$M;i++)) ; do
         for ((j=0;$j<$N;j++)) ; do
             code=$(($upper_left + ($N * $i) + $j))
@@ -123,8 +123,8 @@ rectangle () {
 #     (white on color)(color on black)(black on color)
 ################################################################################
 list() {
-    start=$1
-    finish=$2
+    local start=$1
+    local finish=$2
     for ((i=$start; i<=$finish; i++)) ; do
         #echo -n "${i} : "$'\033['${i}mlorem ipsum$'\033[0m'
         printf "${i} : \033[${i}mlorem ipsum\033[0m\n"
