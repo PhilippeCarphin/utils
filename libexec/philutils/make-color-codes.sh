@@ -94,7 +94,7 @@ rectangle () {
     N=$3
     for ((i=0;i<$M;i++)) ; do
         for ((j=0;$j<$N;j++)) ; do
-            code=$(($upper_left + ($M * $i) + $j))
+            code=$(($upper_left + ($N * $i) + $j))
             print_code $code
         done
         printf "\033[0m\n"
