@@ -1,5 +1,20 @@
 #!/bin/bash
 
+watch_cmd_linux(){
+    inotifywait -q "${files[@]}"
+}
+
+watch_cmd_mac(){
+    fswatch -1 "$@"
+}
+
+watch_cmd=""
+case "$(uname)" in
+    Darwin) watch_cmd=watch_cmd_mac ;;
+    Linux)  watch_cmd=watch_cmd_linux ;;
+    *) echo "Unknown operating system : $(uanme)" ; exit 1 ;;
+esac
+
 case "$1" in
     -h|--help)
         printf "USAGE: $0 FILE(s) CMD ...
@@ -27,7 +42,7 @@ done
 # does work because with every event, we relaunch inotifywait.
 #
 while true ; do
-    if ! event=$(inotifywait -q "${files[@]}") ; then
+    if ! event=$(${watch_cmd} "${files[@]}") ; then
         echo "Error in inotifywait command"
         exit 1
     fi
