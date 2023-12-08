@@ -4,12 +4,28 @@
 #
 
 vc(){
-    local -r cmd="${1}"
+    local cmd="${1}"
+    local alias_str
+    if [[ -n ${VC_EXPAND_ALIASES} ]] ; then
+        if alias_str=$(alias ${cmd} 2>/dev/null) ; then
+            # output of alias is "alias <name>='<alis'"
+            local alias_def=${alias_str#*=}
+            local alias_name=${alias_str%%=*}
+            local alias_def_words=($( eval echo ${alias_def} ) )
+            local alias_cmd=${alias_def_words[0]}
+            cmd=${alias_def_words[0]}
+            echo "${FUNCNAME[0]}: Expanded ${alias},  now looking for ${cmd}" >&2
+        fi
+    fi
+
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
         vim ${file}
-    else
-        file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" -type f)"
+        return
+    fi
+
+    if shopt -q sourcepath ; then
+        file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" -type f -print -quit)"
         if [[ -n "${file}" ]] ; then
             echo ${file}
             vim ${file}
