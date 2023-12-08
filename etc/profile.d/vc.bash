@@ -18,20 +18,28 @@ vc(){
         fi
     fi
 
+    echo "${FUNCNAME[0]}: Looking for shell function '${cmd}'" >&2
+    open_shell_function "${cmd}"
+
+    echo "${FUNCNAME[0]}: Looking for executable '${cmd}' in PATH" >&2
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
         vim ${file}
         return
     fi
 
-    if shopt -q sourcepath ; then
-        file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" -type f -print -quit)"
-        if [[ -n "${file}" ]] ; then
-            echo ${file}
-            vim ${file}
-        else
-            echo "${FUNCNAME[0]}: no '${cmd}' found in path, looking for shell function"
-            open_shell_function "${cmd}"
+    if ! shopt -q sourcepath ; then
+        return 0
+    fi
+
+    echo "${FUNCNAME[0]}: Looking for sourceable file in $PATH" >&2
+    file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" ! -executable -type f -print -quit)"
+    if [[ -n "${file}" ]] ; then
+        echo ${file}
+        vim ${file}
+        return
+    fi
+}
         fi
     fi
 }
@@ -89,18 +97,27 @@ whence()(
 
     local -r cmd="${1}"
 
+    if alias ${cmd} 2>/dev/null ; then
+        return
+    fi
+
+    shopt -s extdebug
+    if declare -F ${cmd} ; then
+        return
+    fi
+
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
         echo "${file}"
-    else
-        file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" -type f)"
-        if [[ -n "${file}" ]] ; then
-            echo ${file}
-        else
-            shopt -s extdebug
-            declare -F ${cmd}
-        fi
+        return
     fi
+
+    file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" -type f)"
+    if [[ -n "${file}" ]] ; then
+        echo ${file}
+        return
+    fi
+
 )
 
 complete -c vc whence
