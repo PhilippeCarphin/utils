@@ -203,7 +203,7 @@ handle_single_candidate(){
         if [[ ${compgen_opt} == "-d" ]] ; then
             find_opt=(-type d)
         fi
-        if [[ $(find ${only_candidate} -maxdepth 1 "${find_opt[@]}") == ${only_candidate} ]] ; then
+        if [[ $(find -L ${only_candidate} -maxdepth 1 "${find_opt[@]}") == ${only_candidate} ]] ; then
             # Can't keep going
             compopt +o filenames
         else
