@@ -79,6 +79,21 @@ __resolve_git_colon_path(){
     echo "${repo_dir}${1#:}"
 }
 
+__get_root_superproject()(
+    while true ; do
+        if ! superproject_root="$(git rev-parse --show-superproject-working-tree)" ; then
+            return 1
+        fi
+
+        if [[ -z "${superproject_root}" ]] ; then
+            git rev-parse --show-toplevel
+            return 0
+        fi
+
+        cd ${superproject_root}
+    done
+)
+
 #
 # Only works for commands.  If you want to do it for a shell function
 # you can edit the code of the shell function yourself if it is one

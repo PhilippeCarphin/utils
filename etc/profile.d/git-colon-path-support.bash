@@ -57,9 +57,42 @@ __complete_git_colon_dirs(){
     __complete_git_colon_paths -d
 }
 
+__get_root_superproject_2(){
+    local current=${1}
+    local superproject_root
+    while true ; do
+        if ! superproject_root="$(command cd "${current}" && git rev-parse --show-superproject-working-tree)" ; then
+            return 1
+        fi
+
+        if [[ -z "${superproject_root}" ]] ; then
+            (cd ${current} && git rev-parse --show-toplevel)
+            return 0
+        fi
+
+        current="${superproject_root}"
+    done
+}
+
+__get_root_superproject()(
+    while true ; do
+        if ! superproject_root="$(git rev-parse --show-superproject-working-tree)" ; then
+            return 1
+        fi
+
+        if [[ -z "${superproject_root}" ]] ; then
+            git rev-parse --show-toplevel
+            return 0
+        fi
+
+        cd ${superproject_root}
+    done
+)
+
+
 __resolve_git_colon_path(){
     local repo_dir
-    if ! repo_dir=$(__get_super_repo_root) ; then
+    if ! repo_dir=$(__get_root_superproject) ; then
         echo "${FUNCNAME[0]} : ERROR See above" >&2
         return 1
     fi
@@ -129,14 +162,9 @@ __complete_non_colon_path(){
     handle_single_candidate "" "${compgen_opt}"
 }
 
-__get_super_repo_root(){
-    local super_repo_root
-    super_repo_root=$(git rev-parse --show-superproject-working-tree --show-toplevel 2>/dev/null | head -n 1)
-    echo "${super_repo_root}"
-}
 
 __complete_true_colon_path(){
-    if ! git_repo="$(__get_super_repo_root)" ; then
+    if ! git_repo="$(__get_root_superproject ${PWD} 2>/dev/null)" ; then
         return 1
     fi
 
