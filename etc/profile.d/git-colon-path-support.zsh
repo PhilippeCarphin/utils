@@ -89,12 +89,27 @@ function wrap_command_colon_dirs(){
 # does not contain any directories, we could also say that completion cannot
 # continue and a space should be added.  This is not the case and this function
 # is me trying really hard to make it happen.
+#
+# Here the logic very different from the BASH version.  In BASH I use compopt
+# -o filenames so that BASH gives me parts of paths, and I use compopt
+# -o nospace so that completion doesn't end.  To end the completion, I just
+# put a single candidate that contains a trailing space in COMPREPLY and do
+# compopt +o filename otherwise BASH would escape the space with a backslash.
+# This effectively ends completion for that word since the next time we press
+# tabe we will be completing a new word.
+#
+# In ZSH, the completion framework is so hard to understand with the zstyle
+# and stuff that I have found the best I could do was to end the completion if
+# the current word is a directory that contains no subdirectories.  This is not
+# the same behavior.  If dir/subdir contains no directories and the current
+# line is 'dir/subd' and there are no other candidates, in BASH pressing TAB
+# once would immediately change the line to 'dir/subdir ' but with this,
+# pressing tab once gives 'dir/subdir' and pressing tab again gives
+# 'dir/dubdir '
 ################################################################################
 __complete_non_colon_dirs(){
-    echo "${funcstack[1]} start" >> ~/.log.txt
     local cur=${words[-1]}
     local exp_cur=$(eval echo ${cur})  # Tilde expansion
-    echo "${funcstack[1]} exp_cur=${exp_cur}" >> ~/.log.txt
     if [[ -d ${exp_cur} ]] && ! contains_directories ${exp_cur} ]] ; then
         compadd -P '' -Q -f "${cur} "
         return
@@ -105,7 +120,27 @@ __complete_non_colon_dirs(){
     # words[2] period.
     CURRENT=2
     words=(whatever "${cur}")
+
+    # Delegate completion to _cd
     _cd
+
+    # Note, instead of doing this weird thing of changing CURRENT to 2 and
+    # words to (x "${cur}"), apparently we're supposed to be able to use
+    # '_files -/' to say 'complete directories.  This function is meant to be
+    # a utility function that users can use to create their own completion
+    # scripts.  However, suppose in my PWD there is
+    # dir/
+    #    subdir1/
+    #    subdir2/
+    #    file1
+    # normally, then for 'dir/' we get candidates 'dir/subdir1', 'dir/subdir2'
+    # and file1 is not among the candidates.  However, if we have 'dir/f', then
+    # we do get given the candidate 'dir/file1'.
+    #
+    # I tried to use the _files function as that is what we are supposed to use
+    # but then I gave up.  I then tried to get _cd to work only to find out that
+    # it only operates on words[2] rather than words[-1] (the last word of the
+    # command)
 }
 
 function contains_directories(){
@@ -126,10 +161,6 @@ __complete_true_colon_paths(){
         return 1
     fi
 
-    # CDPATH=${git_repo} _files -/ -P :/
-    # return
-    echo "git_repo=${git_repo}" >> ~/.log.txt
-
     local cur=${words[-1]}
 
     if [[ "${cur}" == : ]] ; then
@@ -137,14 +168,13 @@ __complete_true_colon_paths(){
         return
     fi
 
-    subdir=${cur#:} 
+    subdir=${cur#:}
 
     # Note: We ensure that ${cur} always starts with ':/' so we don't put one
     # between ${git_repo} and ${cur#:}.
     full_cur="${git_repo}${subdir}"
 
     candidates=($(ls -d --color=never ${full_cur}*))
-    # echo "candidates=${candidates[*]}" >> ~/.log.txt
     for full_path in "${candidates[@]}" ; do
         if [[ "${1}" == dirs ]] && ! [[ -d "${full_path}" ]] ; then
             continue
@@ -163,18 +193,16 @@ __complete_true_colon_paths(){
         elif [[ -d "${git_repo}${valid_candidates[1]}" ]] then
             # Directories end completion differently depending on whether
             # directory completion ($1 == dirs) was requested:
-            if ( [[ "${1}" == dirs ]] &&
-                  ! contains_directories ${git_repo}${valid_candidates}) \
-               || ! contains_anything ${git_repo}${valid_candidates[1]} ; then
-                compadd -Q -S '' ":${valid_candidates[1]}/ "
-            else
+            if ( [[ "${1}" == dirs ]] && contains_directories ${git_repo}${valid_candidates}) \
+               || contains_anything ${git_repo}${valid_candidates[1]} ; then
                 compadd -Q -S '' ":${valid_candidates[1]}/"
+            else
+                compadd -Q -S '' ":${valid_candidates[1]}/ "
             fi
         fi
     else
         comps=()
         for c in "${valid_candidates[@]}" ; do
-            echo "adding ${c}" >> ~/.log.txt
             comps+=(":${c}")
         done
         compset -P '*/'
