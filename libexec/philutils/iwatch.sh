@@ -46,6 +46,19 @@ while true ; do
         echo "Error in inotifywait command"
         exit 1
     fi
+    #
+    # For long running programs, this is useful.  We run the command asynchronously
+    # and go back to waiting for file events.  When we get a new file event,
+    # we kill the previous process and start a new one.  This way iwatch can
+    # be used to test servers and things of that nature.
+    #
+    kill ${run_pid} 2>/dev/null || true
+    run &
+    run_pid=$!
+    sleep 1
+done
+
+run(){
     printf "==== event : \033[35m${event}\033[0m ====\n"
     printf "running \033[1m$*\033[0m\n"
     eval "$@"
@@ -55,8 +68,7 @@ while true ; do
     else
         printf "$0: \033[1;31mERROR: ${exit_code}\033[0m\n\n"
     fi
-    sleep 1
-done
+}
 
 # Events: move_self, attrib, delete_sel
 # # inotifywait -q -m -e move_self ${file} \
