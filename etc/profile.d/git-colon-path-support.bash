@@ -158,8 +158,16 @@ __complete_non_colon_path(){
     # and I want to be able to do 'vim somedir/empty' and
     # have a space added to indicate to me that the directory
     # doesn't contain directories
-    COMPREPLY=($(echo ${COMPREPLY[@]} | tr ' ' '\n' | sort | uniq))
+    local IFS=$'\n'
+    COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
     handle_single_candidate "" "${compgen_opt}"
+}
+
+__complete_cd(){
+    _cd
+    local IFS=$'\n'
+    COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
+    handle_single_candidate "" -d
 }
 
 
@@ -188,6 +196,9 @@ __complete_true_colon_path(){
 
     handle_single_candidate ${git_repo} ${compgen_opt}
 }
+log(){
+    echo $* >> ~/.log.txt
+}
 
 handle_single_candidate(){
     local prefix=${1}
@@ -203,13 +214,51 @@ handle_single_candidate(){
         if [[ ${compgen_opt} == "-d" ]] ; then
             find_opt=(-type d)
         fi
-        if [[ $(find -L ${only_candidate} -maxdepth 1 "${find_opt[@]}") == ${only_candidate} ]] ; then
-            # Can't keep going
+        #
+        # Determine directory to search to decide if completion should continue
+        # or not.  Note: __complete_non_colon_path delegates to _cd to produce
+        # candidates which handles CDPATH so this is the only place where it
+        # needs to be handled.
+        #
+        local search_dir
+        if [[ -d ${only_candidate} ]] ; then
+            search_dir=${only_candidate}
+        else
+            # Then look in CDPATH
+            local OIFS=$IFS ; IFS=:
+            for d in ${CDPATH} ; do
+                log "Checking ${d} from CDPATH"
+                if [[ -d ${d}/${only_candidate} ]] ; then
+                    search_dir=${d}/${only_candidate}
+                    log "Found search_dir='${search_dir}' in CDPATH"
+                    break
+                fi
+            done
+        fi
+        if [[ -z ${search_dir} ]] ; then
+            search_dir=${only_candidate}
+        fi
+        IFS=${OIFS}
+        #if [[ $(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}") == ${only_candidate} ]] ; then
+        local nb_sub=$(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}" | wc -l)
+        # Note: use [[ -eq ]] or (( == )) for arithmetic equal to disregard
+        # spaces in $nb_sub.  On MacOS, 'wc -l' outputs the number with leading
+        # space which becomes something like [[ '    1' == 1 ]] which evaluates
+        # to false.
+        if [[ ${nb_sub} -eq 1 ]] ; then
             compopt +o filenames
         else
             compopt -o nospace
         fi
     elif ((${#COMPREPLY[@]} == 0)) ; then
+        #
+        # Add a space to end completion when ${cur} has a trailing slash
+        # but does not contain anything that would allow completion to continue.
+        #
+        # If we have for example 'cd :/etc/profile.d/_' then because profile.d
+        # contains no directories, then COMPREPLY will be empty.  This ensures
+        # that a space is added 'cd :/etc/profile.d/ _'
+        #
         if [[ -e "${git_repo}${cur}" ]] ; then
             COMPREPLY=(${cur})
             compopt +o nospace
