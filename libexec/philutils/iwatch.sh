@@ -33,6 +33,34 @@ for f in "${files[@]}" ; do
     echo "f='${f}'"
 done
 
+
+run(){
+    # Stack overflow answer: https://unix.stackexchange.com/a/146770/161630
+    _term() { 
+        echo "run process caught a signal"
+        kill -TERM "$child_pid" 2>/dev/null
+        caught_term=1
+    }
+    trap _term SIGTERM
+
+    printf "==== event : \033[35m${event}\033[0m ====\n"
+    printf "running \033[1m$*\033[0m\n"
+    "$@" &
+    child_pid=$!
+    caught_term=0
+    wait ${child_pid}
+    exit_code=$?
+    if [[ ${caught_term} == 1 ]] ; then
+        printf "$0: \033[1;33mTERM\033[0m\n"
+        return 0
+    fi
+    if ! ((exit_code)) ; then
+        printf "==$0==: \033[1;32mSUCCESS\033[0m\n\n"
+    else
+        printf "==$0==: \033[1;31mERROR: ${exit_code}\033[0m\n\n"
+    fi
+}
+export -f run
 #
 # Tested with VIM.  The inotifywait command takes a file name but it looks
 # up the inode number of that file and watches that inode.  The problem with
@@ -41,6 +69,9 @@ done
 # below with 'inotifywait ${file} | while ... done' doesn't work.  The following
 # does work because with every event, we relaunch inotifywait.
 #
+trap 'if ! kill -TERM ${run_pid} 2>/dev/null ; then echo "exit trap: no process to kill" ; else  wait ${run_pid} ; fi' EXIT
+
+export event
 while true ; do
     if ! event=$(${watch_cmd} "${files[@]}") ; then
         echo "Error in inotifywait command"
@@ -52,30 +83,15 @@ while true ; do
     # we kill the previous process and start a new one.  This way iwatch can
     # be used to test servers and things of that nature.
     #
-    kill ${run_pid} 2>/dev/null || true
-    run &
+    kill ${run_pid} 2>/dev/null
+    wait ${run_pid}
+    #
+    # Use setsid to prevent forwarding of signals to child this way the only
+    # signal it can receive is going to be the TERM signal
+    # Also note, first argument of a `bash -c '...'` becomes the `$0` of that
+    # process.
+    #
+    setsid bash -c 'run "$@"' "$*" "$@" &
     run_pid=$!
-    sleep 1
+    sleep 0.5
 done
-
-run(){
-    printf "==== event : \033[35m${event}\033[0m ====\n"
-    printf "running \033[1m$*\033[0m\n"
-    eval "$@"
-    exit_code=$?
-    if ! ((exit_code)) ; then
-        printf "$0: \033[1;32mSUCCESS\033[0m\n\n"
-    else
-        printf "$0: \033[1;31mERROR: ${exit_code}\033[0m\n\n"
-    fi
-}
-
-# Events: move_self, attrib, delete_sel
-# # inotifywait -q -m -e move_self ${file} \
-# inotifywait -q -m ${file} \
-#     | while read -r filename event; do
-#         echo "filename=${filename}, event=${event}"
-#         printf "running \033[1m$*\033[0m\n"
-#         "$@"         # or "./$filename"
-#     done
-
