@@ -28,14 +28,25 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         path, query = qp.path, qp.query
         print(f"\n\033[1;4mIncoming \033[34m{method}\033[39m request on path = \033[35m{path}\033[0m")
         print(self.requestline)
+
+        #
+        # Print urldecoded query parameters
+        #
         if query:
             print(f"Query Parameters\n================\033[35m")
             for k,v in map(lambda kv: kv.split("="), query.split('&')): # What's the point of urlparse if I have to do this myself?
+                v = urllib.parse.unquote(v)
                 print(f"{k}: {v}")
             print("\033[0m", end='')
+        #
+        # Print headers
+        #
         print(f"Headers\n=======\033[36m")
         for k,v in self.headers.items():
             print(f"\033[36m'{k}': '{v}'\033[0m")
+        #
+        # Print body in various ways depending on type
+        #
         if 'Content-Length' in self.headers:
             content_length = int(self.headers['Content-Length'])
             request_body = self.rfile.read(content_length).decode('utf-8')
@@ -67,7 +78,7 @@ class MyServer(http.server.BaseHTTPRequestHandler):
 
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        # json.dump({"message": "Hello World"}, self.wfile)
+        json.dump({"message": "Hello World"}, self.wfile)
         self.wfile.write(bytes(json.dumps({"message": "Hello World"},indent='    ') + '\n', 'utf-8'))
         self.send_response(200)
 
