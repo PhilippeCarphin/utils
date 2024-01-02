@@ -14,16 +14,19 @@ vc(){
             local alias_def_words=($( eval echo ${alias_def} ) )
             local alias_cmd=${alias_def_words[0]}
             cmd=${alias_def_words[0]}
-            echo "${FUNCNAME[0]}: Expanded ${alias},  now looking for ${cmd}" >&2
+            echo "${FUNCNAME[0]}: Expanded '${alias_str}', now looking for '${cmd}'" >&2
         fi
     fi
 
     echo "${FUNCNAME[0]}: Looking for shell function '${cmd}'" >&2
-    open_shell_function "${cmd}"
+    if open_shell_function "${cmd}" ; then
+        return 0
+    fi
 
     echo "${FUNCNAME[0]}: Looking for executable '${cmd}' in PATH" >&2
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
+        echo "${FUNCNAME[0]}: ${cmd} is '${file}' from PATH" >&2
         vim ${file}
         return
     fi
@@ -32,10 +35,10 @@ vc(){
         return 0
     fi
 
-    echo "${FUNCNAME[0]}: Looking for sourceable file in $PATH" >&2
+    echo "${FUNCNAME[0]}: Looking for sourceable file in PATH" >&2
     file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" ! -executable -type f -print -quit)"
     if [[ -n "${file}" ]] ; then
-        echo ${file}
+        echo "${FUNCNAME[0]}: ${cmd} is non-executable file '${file}' from PATH" >&2
         vim ${file}
         return
     fi
@@ -124,22 +127,22 @@ open_shell_function()(
 
     local info=$(declare -F ${shell_function})
     if [[ -z "${info}" ]] ; then
-        echo "No info from 'declare -F' for '${shell_function}'"
+        echo "vc: No info from 'declare -F' for '${shell_function}'"
         return 1
     fi
 
     local lineno
     if ! lineno=$(echo ${info} | cut -d ' ' -f 2) ; then
-         echo "Error getting line number from info '${info}' on '${shell_function}'"
+         echo "vc: Error getting line number from info '${info}' on '${shell_function}'"
          return 1
     fi
 
     local file
     if ! file=$(echo ${info} | cut -d ' ' -f 3) ; then
-        echo "Error getting filename from info '${info}' on '${shell_function}'"
+        echo "vc: Error getting filename from info '${info}' on '${shell_function}'"
         return 1
     fi
-
+    echo "vc: Opening '${file}'"
     vim ${file} +${lineno}
 )
 
@@ -159,27 +162,28 @@ _open_shell_function(){
 
 whence()(
 
-    local -r cmd="${1}"
+    local -r cmd=$1
 
     if alias ${cmd} 2>/dev/null ; then
-        return
+        : return
     fi
 
     shopt -s extdebug
-    if declare -F ${cmd} ; then
-        return
+    local func
+    if func=$(declare -F ${cmd}) ; then
+        : return
     fi
 
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
         echo "${file}"
-        return
+        : return
     fi
 
-    file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" -type f)"
+    file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" ! -executable -type f)"
     if [[ -n "${file}" ]] ; then
         echo ${file}
-        return
+        : return
     fi
 
 )

@@ -1,25 +1,55 @@
 __vc_log(){
     echo "${funcstack[2]}: $*" >&2
 }
+whence(){
+    local cmd=$1
+    local file
+    if ! info=($(builtin whence -v ${cmd})) ; then
+        if ! file=$(_vc_find_path_sourceable_file ${cmd}) ; then
+            echo "${funcstack[1]}: No sourceable file found in PATH" >&2
+            return 1
+        fi
+        echo "custom_whence: ${cmd} is a sourceable file: ${file} in PATH"
+    else
+        echo "${info[*]}"
+    fi
+}
+
+apologize(){
+    echo "The file ${file} doesn't exist.  This is possibly because it was"
+    echo "sourced with a path relative to PWD.  On behalf of ZSH, I apologize"
+    echo "for this inconvenience"
+}
 
 vc(){
     local cmd=$1
     local info=
-    if ! info=($(whence -v ${cmd})) ; then
+    if ! info=($(builtin whence -v ${cmd})) ; then
         echo "${funcstack[1]}: ${info[*]}" >&2
-        return 1
+        local file
+        if ! file=$(_vc_find_path_sourceable_file ${cmd}) ; then
+            echo "${funcstack[1]}: No sourceable file found in PATH" >&2
+            return 1
+        fi
+        vim ${file}
+        return 0
     fi
 
     echo "${funcstack[1]}: ${info[*]}" >&2
     case "${info[*]}" in
         ${cmd}\ is\ a\ shell\ function\ from\ *)
             local file=${info[-1]}
+            if ! [[ -f ${file} ]] ; then
+                apologize
+                return 1
+            fi
             local lineno="$(\grep -n "^\s*\(function\)\?\s*${cmd}\s*()" ${file} | cut -d ':' -f 1)"
             if [[ -n "${lineno}" ]] ; then
                 vim ${file} +${lineno}
             else
                 vim ${file}
             fi
+            return 0
             ;;
         ${cmd}\ is\ an\ autoload\ shell\ function)
             if ! file=$(find_autoload_shell_function ${cmd}) ; then
@@ -28,6 +58,7 @@ vc(){
             fi
             echo "${funcstack[1]}(): file='${file}'"
             vim ${file}
+            return 0
             ;;
         ${cmd}\ is\ a\ shell\ builtin)
             return 1
@@ -49,6 +80,7 @@ vc(){
             return 1
             ;;
     esac
+
 }
 
 find_autoload_shell_function(){
@@ -101,6 +133,34 @@ _vc_add_autoloads(){
             fi
         done
     done
+}
+
+_vc_find_path_sourceable_file(){
+    local filename=$1
+    local OIFS=${IFS}
+    IFS=:
+    local path_array=(${=PATH})
+    IFS=${OIFS}
+    local results=()
+    for p in "${path_array[@]}" ; do
+        for f in ${p}/*(N) ; do
+            if ! [[ ${f} == ${p}/${filename} ]] ; then
+                continue
+            fi
+            if [[ -d ${f} ]] ; then
+                continue
+            fi
+            if [[ -x ${f} ]] ; then
+                continue
+            fi
+            if ! [[ "$(file -L ${f})" == *ASCII* ]] ; then
+                continue
+            fi
+            echo "$f"
+            return 0
+        done
+    done
+    return 1
 }
 
 
