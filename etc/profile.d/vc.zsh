@@ -143,6 +143,8 @@ _vc_find_path_sourceable_file(){
     IFS=${OIFS}
     local results=()
     for p in "${path_array[@]}" ; do
+        # NULLGLOB Thing: Adding (N) makes it so that if the glob matches
+        # nothing it's OK
         for f in ${p}/*(N) ; do
             if ! [[ ${f} == ${p}/${filename} ]] ; then
                 continue
