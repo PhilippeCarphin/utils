@@ -19,9 +19,17 @@ vc(){
     fi
 
     echo "${FUNCNAME[0]}: Looking for shell function '${cmd}'" >&2
-    if open_shell_function "${cmd}" ; then
-        return 0
+    open_shell_function "${cmd}"
+    case $? in
+        0) return 0 ;;
+        1) ;;
+        2) return 1 ;;
+    esac
+
+    if ${shell_function_exists_but_not_file} ; then
+        return 1
     fi
+    echo "shell_function_exists_but_not_file=${shell_function_exists_but_not_file}"
 
     echo "${FUNCNAME[0]}: Looking for executable '${cmd}' in PATH" >&2
     local file
@@ -114,37 +122,48 @@ _vc(){
 ################################################################################
 # Open the file containing the definition of the supplied shell function
 ################################################################################
-open_shell_function()(
+open_shell_function(){
+    (
 
-    local -r shell_function="${1}"
+        local -r shell_function="${1}"
 
-    #
-    # The extdebug setting causes `declare -F ${shell_function}` to print
-    # '<function> <lineno> <file>'.  Since this function runs in a subshell
-    # turning it on here does not affect the outer environment
-    #
-    shopt -s extdebug
+        #
+        # The extdebug setting causes `declare -F ${shell_function}` to print
+        # '<function> <lineno> <file>'.  Since this function runs in a subshell
+        # turning it on here does not affect the outer environment
+        #
+        shopt -s extdebug
 
-    local info=$(declare -F ${shell_function})
-    if [[ -z "${info}" ]] ; then
-        echo "vc: No info from 'declare -F' for '${shell_function}'"
-        return 1
-    fi
+        local info=$(declare -F ${shell_function})
+        if [[ -z "${info}" ]] ; then
+            echo "vc: No info from 'declare -F' for '${shell_function}'"
+            return 1
+        fi
 
-    local lineno
-    if ! lineno=$(echo ${info} | cut -d ' ' -f 2) ; then
-         echo "vc: Error getting line number from info '${info}' on '${shell_function}'"
-         return 1
-    fi
+        local lineno
+        if ! lineno=$(echo ${info} | cut -d ' ' -f 2) ; then
+             echo "vc: Error getting line number from info '${info}' on '${shell_function}'"
+             return 1
+        fi
 
-    local file
-    if ! file=$(echo ${info} | cut -d ' ' -f 3) ; then
-        echo "vc: Error getting filename from info '${info}' on '${shell_function}'"
-        return 1
-    fi
-    echo "vc: Opening '${file}'"
-    vim ${file} +${lineno}
-)
+        local file
+        if ! file=$(echo ${info} | cut -d ' ' -f 3) ; then
+            echo "vc: Error getting filename from info '${info}' on '${shell_function}'"
+            return 1
+        fi
+        if [[ "${file}" != /* ]] ; then
+            echo "vc: Info: file '${file}' is a relative path.  This will only work if run from the directory where the original source command was run" >&2
+        fi
+
+        if ! [[ -e "${file}" ]] ; then
+            echo "vc: Error: '${cmd}' is a shell function from '${file}' which does not exist" >&2
+            return 2
+        fi
+
+        echo "vc: Opening '${file}'"
+        vim ${file} +${lineno}
+    )
+}
 
 _open_shell_function(){
     local cur prev words cword
