@@ -62,7 +62,8 @@ _vc_add_path_sourceable(){
 _vc_add_path_sourceable_find(){
     local IFS=$': \n'
     for f in $(find -L ${PATH} -maxdepth 1 -name "${cur}*" ! -executable -readable) ; do
-        if ! [[ "$(file -L ${f})" == *ASCII* ]] ; then
+        local file_result="$(file -L ${f})"
+        if ! ( [[ "${file_result}" == *ASCII* ]] || [[ "${file_result}" == *UTF-8* ]] ) ; then
             continue
         fi
         COMPREPLY+=(${f##*/})
@@ -79,7 +80,8 @@ _vc_add_path_sourceable_shell_wildcard(){
             if [[ -x ${f} ]] ; then
                 continue
             fi
-            if ! [[ "$(file -L ${f})" == *ASCII* ]] ; then
+            local file_result="$(file -L ${f})"
+            if ! ( [[ "${file_result}" == *ASCII* ]] || [[ "${file_result}" == *UTF-8* ]] ) ; then
                 continue
             fi
             COMPREPLY+=(${f##*/})

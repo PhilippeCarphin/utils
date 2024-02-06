@@ -155,7 +155,8 @@ _vc_find_path_sourceable_file(){
             if [[ -x ${f} ]] ; then
                 continue
             fi
-            if ! [[ "$(file -L ${f})" == *ASCII* ]] ; then
+            local file_result="$(file -L ${f})"
+            if ! ( [[ "${file_result}" == *ASCII* ]] || [[ "${file_result}" == *UTF-8* ]] ) ; then
                 continue
             fi
             echo "$f"
