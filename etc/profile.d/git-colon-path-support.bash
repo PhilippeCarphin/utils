@@ -196,9 +196,6 @@ __complete_true_colon_path(){
 
     handle_single_candidate ${git_repo} ${compgen_opt}
 }
-log(){
-    echo $* >> ~/.log.txt
-}
 
 handle_single_candidate(){
     local prefix=${1}
@@ -227,10 +224,8 @@ handle_single_candidate(){
             # Then look in CDPATH
             local OIFS=$IFS ; IFS=:
             for d in ${CDPATH} ; do
-                log "Checking ${d} from CDPATH"
                 if [[ -d ${d}/${only_candidate} ]] ; then
                     search_dir=${d}/${only_candidate}
-                    log "Found search_dir='${search_dir}' in CDPATH"
                     break
                 fi
             done
