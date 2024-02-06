@@ -78,7 +78,6 @@ class MyServer(http.server.BaseHTTPRequestHandler):
 
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        json.dump({"message": "Hello World"}, self.wfile)
         self.wfile.write(bytes(json.dumps({"message": "Hello World"},indent='    ') + '\n', 'utf-8'))
         self.send_response(200)
 
