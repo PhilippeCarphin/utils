@@ -19,17 +19,11 @@ vc(){
     fi
 
     echo "${FUNCNAME[0]}: Looking for shell function '${cmd}'" >&2
-    open_shell_function "${cmd}"
-    case $? in
-        0) return 0 ;;
-        1) ;;
-        2) return 1 ;;
+    open_shell_function "${cmd}" ; case $? in
+        0) return 0 ;; # We're back from opening the shell function
+        1) ;; # cmd is not a shell function, try other things
+        2) return 1 ;; # ${cmd} is a shell function but its file doesn't exist
     esac
-
-    if ${shell_function_exists_but_not_file} ; then
-        return 1
-    fi
-    echo "shell_function_exists_but_not_file=${shell_function_exists_but_not_file}"
 
     echo "${FUNCNAME[0]}: Looking for executable '${cmd}' in PATH" >&2
     local file
