@@ -186,6 +186,7 @@ whence()(
     shopt -s extdebug
     local func
     if func=$(declare -F ${cmd}) ; then
+        echo "${func}"
         : return
     fi
 
