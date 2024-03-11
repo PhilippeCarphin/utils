@@ -32,7 +32,7 @@
 # The function takes a first argument to change between completing only
 # directories or any filename.
 ################################################################################
-__complete_git_colon_paths(){
+_gcps_complete_colon_paths(){
     local compgen_opt=${1}
     local filedir_opt
     case ${1} in
@@ -47,17 +47,17 @@ __complete_git_colon_paths(){
     _init_completion || return;
 
     if [[ "${cur}" != ':' ]] && [[ "${prev}" != : ]] ; then
-        __complete_non_colon_path
+        _gcps_complete_non_colon_path
     else
-        __complete_true_colon_path
+        _gcps_complete_true_colon_path
     fi
 }
 
-__complete_git_colon_dirs(){
-    __complete_git_colon_paths -d
+_gcps_complete_colon_dirs(){
+    _gcps_complete_colon_paths -d
 }
 
-__get_root_superproject_2(){
+_gcps_get_root_superproject_2(){
     local current=${1}
     local superproject_root
     while true ; do
@@ -74,7 +74,7 @@ __get_root_superproject_2(){
     done
 }
 
-__get_root_superproject()(
+_gcps_get_root_superproject()(
     while true ; do
         if ! superproject_root="$(git rev-parse --show-superproject-working-tree)" ; then
             return 1
@@ -90,9 +90,9 @@ __get_root_superproject()(
 )
 
 
-__resolve_git_colon_path(){
+_gcps_resolve_git_colon_path(){
     local repo_dir
-    if ! repo_dir=$(__get_root_superproject) ; then
+    if ! repo_dir=$(_gcps_get_root_superproject) ; then
         echo "${FUNCNAME[0]} : ERROR See above" >&2
         return 1
     fi
@@ -111,7 +111,7 @@ __resolve_git_colon_path(){
 # of your shell functions.  Otherwise, I'm afraid I can't do anything
 # for you.
 #
-wrap_command_colon_paths(){
+gcps_wrap_command_colon_paths(){
     local cmd="${1}"
     shift
 
@@ -122,7 +122,7 @@ wrap_command_colon_paths(){
         local new_arg
         case "${arg}" in
             :*)
-                if ! new_arg=$(__resolve_git_colon_path "${arg}") ; then
+                if ! new_arg=$(_gcps_resolve_git_colon_path "${arg}") ; then
                     echo "${FUNCNAME[0]} ERROR see above"
                     return 1
                 fi
@@ -148,7 +148,7 @@ wrap_command_colon_paths(){
 # continue and a space should be added.  This is not the case and this function
 # is me trying really hard to make it happen.
 ################################################################################
-__complete_non_colon_path(){
+_gcps_complete_non_colon_path(){
     _filedir ${filedir_opt}
     if [[ -n ${BASH_XTRACEFD} ]] ; then
         echo "COMPREPLY: (${COMPREPLY[@]})" >&${BASH_XTRACEFD}
@@ -160,19 +160,19 @@ __complete_non_colon_path(){
     # doesn't contain directories
     local IFS=$'\n'
     COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
-    handle_single_candidate "" "${compgen_opt}"
+    _gcps_handle_single_candidate "" "${compgen_opt}"
 }
 
-__complete_cd(){
+_gcps_complete_cd(){
     _cd
     local IFS=$'\n'
     COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
-    handle_single_candidate "" -d
+    _gcps_handle_single_candidate "" -d
 }
 
 
-__complete_true_colon_path(){
-    if ! git_repo="$(__get_root_superproject ${PWD} 2>/dev/null)" ; then
+_gcps_complete_true_colon_path(){
+    if ! git_repo="$(_gcps_get_root_superproject ${PWD} 2>/dev/null)" ; then
         return 1
     fi
 
@@ -187,17 +187,16 @@ __complete_true_colon_path(){
         return
     fi
 
-    local i=0
-
+    local i=0 full_path relative_path
     for full_path in $(compgen ${compgen_opt} -- ${git_repo}${cur}) ; do
         relative_path="${full_path##${git_repo}}"
         COMPREPLY[i++]="${relative_path}"
     done
 
-    handle_single_candidate ${git_repo} ${compgen_opt}
+    _gcps_handle_single_candidate ${git_repo} ${compgen_opt}
 }
 
-handle_single_candidate(){
+_gcps_handle_single_candidate(){
     local prefix=${1}
     local compgen_opt=${2}
     if ((${#COMPREPLY[@]} == 1)) ; then
@@ -213,7 +212,7 @@ handle_single_candidate(){
         fi
         #
         # Determine directory to search to decide if completion should continue
-        # or not.  Note: __complete_non_colon_path delegates to _cd to produce
+        # or not.  Note: _gcps_complete_non_colon_path delegates to _cd to produce
         # candidates which handles CDPATH so this is the only place where it
         # needs to be handled.
         #
