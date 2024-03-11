@@ -41,15 +41,12 @@ pathmunge () {
 # by the `id` command
 #
 if [ -x /usr/bin/id ]; then
-    # if [ -z "$EUID" ]; then
-    #     # ksh workaround
-    #     EUID=`/usr/bin/id -u`
-    #     UID=`/usr/bin/id -ru`
-    # fi
-    ORIGINAL_USER="`/usr/bin/id -un`"
-    ORIGINAL_LOGNAME=$ORIGINAL_USER
-    ORIGINAL_HOME="$(eval echo ~$ORIGINAL_USER)"
-    # MAIL="/var/spool/mail/$USER"
+    if [ -z "$EUID" ]; then
+        # ksh workaround
+        EUID=`/usr/bin/id -u $USER`
+        UID=`/usr/bin/id -ru $USER`
+    fi
+    MAIL="/var/spool/mail/$USER"
 fi
 
 # Path manipulation
@@ -62,7 +59,7 @@ else
 fi
 
 HOSTNAME=`/usr/bin/hostname 2>/dev/null`
-HISTFILE=$(eval echo ~${ORIGINAL_USER}/.alternate_history)
+HISTFILE="${ORIGINAL_HOME}/.alternate_history"
 HISTSIZE=1000
 if [ "$HISTCONTROL" = "ignorespace" ] ; then
     export HISTCONTROL=ignoreboth
@@ -104,25 +101,51 @@ if [ -n "${BASH_VERSION-}" ] ; then
        fi
 fi
 
-
-echo "$HOME/.profile"
-if [[ -v USE_PROFILE_XTRACE ]] ; then
-    export PS4='+ \033[35m[${BASH_SOURCE[0]}:${LINENO}]\033[0m '
-    set -x
-fi
-
 package_dir="$(cd "$(dirname $0)/.." && pwd)"
 if [[ -f "${package_dir}/etc/profile.d/vc.bash" ]] ; then
     source "${package_dir}/etc/profile.d/vc.bash"
 fi
-source $HOME/.profile
-p.use-profile.adapt_ps1(){
-    PS1="$(echo "$PS1" | sed 's/\\u/$USER/')"
+
+#
+# If someone does `PS1="$(whoami): ...", it bakes my username into the prompt
+# so we change whoami before that happens so that my modified whoami bakes
+# their username into the prompt.  Also this modified version of whoami improves
+# the illusion that I am the other user.  Doing the same for id
+#
+alias whoami="echo $USER"
+id(){
+    if [[ "$1" != "" ]] ; then
+        command id "$@"
+    else
+        command id $USER
+    fi
 }
-if [[ -n "${PROMPT_COMMAND}" ]] ; then
-    PROMPT_COMMAND="${PROMPT_COMMAND};p.use-profile.adapt_ps1"
-else
-    adapt_ps1
+
+source $HOME/.profile
+
+if [[ -v DISPLAY ]] && ! [[ -v XAUTHORITY ]] ; then
+    printf "p.use-profile: WARNING: Because you have a DISPLAY and no XAUTHORITY you will need to set \`HOME=\${ORIGINAL_HOME}\` to make X11 things work.\n"
 fi
-# So that HOME shows up as `~` in prompt
+
+################################################################################
+# Special epilogue:  Change PS1.  If PROMPT_COMMAND is set, then we don't know
+# if it modifies PS1 so we append a call to p.use_profile.adapt_ps1 to call it
+# every time.
+################################################################################
+
+if [[ -v USE_PROFILE_ADAPT_PS1 ]] ; then
+    p.use-profile.adapt_ps1(){
+        PS1="$(echo "$PS1" | sed -e 's/\\u/$USER/' -e 's/$ORIGINAL_USER/$USER/')"
+    }
+    if [[ -n "${PROMPT_COMMAND}" ]] ; then
+        if [[ ${PROMPT_COMMAND@a} == *a* ]] ; then
+            PROMPT_COMMAND+=(p.use-profile.adapt_ps1)
+        else
+            PROMPT_COMMAND="${PROMPT_COMMAND};p.use-profile.adapt_ps1"
+        fi
+    else
+        p.use-profile.adapt_ps1
+    fi
+    # So that HOME shows up as `~` in prompt
+fi
 cd $HOME
