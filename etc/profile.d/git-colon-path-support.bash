@@ -53,6 +53,19 @@ _gcps_complete_colon_paths(){
     fi
 }
 
+_gcps_complete_cd(){
+    compopt -o filenames
+    local cur prev words cword git_repo
+    _init_completion || return;
+    if [[ "${cur}" != ':' ]] && [[ "${prev}" != : ]] ; then
+        _cd
+        COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
+        _gcps_handle_single_candidate "" -d
+    else
+        _gcps_complete_true_colon_path -d
+    fi
+}
+
 _gcps_complete_colon_dirs(){
     _gcps_complete_colon_paths -d
 }
@@ -163,12 +176,12 @@ _gcps_complete_non_colon_path(){
     _gcps_handle_single_candidate "" "${compgen_opt}"
 }
 
-_gcps_complete_cd(){
-    _cd
-    local IFS=$'\n'
-    COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
-    _gcps_handle_single_candidate "" -d
-}
+# _gcps_complete_cd(){
+#     _cd
+#     local IFS=$'\n'
+#     COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
+#     _gcps_handle_single_candidate "" -d
+# }
 
 
 _gcps_complete_true_colon_path(){
@@ -216,10 +229,8 @@ _gcps_handle_single_candidate(){
         # candidates which handles CDPATH so this is the only place where it
         # needs to be handled.
         #
-        local search_dir
-        if [[ -d ${only_candidate} ]] ; then
-            search_dir=${only_candidate}
-        else
+        local search_dir=${only_candidate}
+        if ! [[ -d ${only_candidate} ]] ; then
             # Then look in CDPATH
             local OIFS=$IFS ; IFS=:
             for d in ${CDPATH} ; do
@@ -228,13 +239,11 @@ _gcps_handle_single_candidate(){
                     break
                 fi
             done
+            IFS=${OIFS}
         fi
-        if [[ -z ${search_dir} ]] ; then
-            search_dir=${only_candidate}
-        fi
-        IFS=${OIFS}
+
         #if [[ $(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}") == ${only_candidate} ]] ; then
-        local nb_sub=$(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}" | wc -l)
+        local nb_sub=$(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}" 2>/dev/null | wc -l)
         # Note: use [[ -eq ]] or (( == )) for arithmetic equal to disregard
         # spaces in $nb_sub.  On MacOS, 'wc -l' outputs the number with leading
         # space which becomes something like [[ '    1' == 1 ]] which evaluates
