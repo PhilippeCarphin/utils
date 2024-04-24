@@ -122,6 +122,7 @@ id(){
 }
 
 source $HOME/.profile
+source ${USE_PROFILE_ROOT}/etc/profile.d/vc.bash
 
 if [[ -v DISPLAY ]] && ! [[ -v XAUTHORITY ]] ; then
     printf "p.use-profile: WARNING: Because you have a DISPLAY and no XAUTHORITY you will need to set \`HOME=\${ORIGINAL_HOME}\` to make X11 things work.\n"
