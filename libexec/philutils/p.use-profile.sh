@@ -59,7 +59,8 @@ p.use-profile(){
             "") _p.use-profile-usage "$@" ; return 1 ;;
             -d|-x|--debug) dbg=-x ; shift ;;
             --no-adapt-ps1) adapt_ps1=false ; shift ;;
-            --) posargs=( "$@" ) ; break ;;
+            --) shift ; posargs=( "$@" ) ; break ;;
+            -*) echo "ERROR: Unknown option '$1'" ; return 1 ;;
             *) posargs+=( "$1" ) ; shift ;;
         esac
     done
@@ -69,7 +70,9 @@ p.use-profile(){
         *) echo "ERROR: More than one positional arguments : ${posargs*}" >&2 ; return 1 ;;
     esac
 
-    profile="$(cd -P $(dirname $0)/../libexec/philutils/ && pwd)/etc-profile.sh"
+    local use_profile_root="$(cd $(dirname $0)/.. && pwd)"
+
+    profile="${use_profile_root}/libexec/philutils/etc-profile.sh"
 
     # Doing `userdir="$(eval echo ~$username)" is the simplest way to go but we
     # are doing eval with user supplied input.  For example, replacing 'tree'
@@ -84,7 +87,7 @@ p.use-profile(){
     # of a user, there is a command that does that which I found out about in
     # that answer.
     local userdir
-    if ! IFS=":" read _ _ _ _ _ userdir _ < <(getent passwd "${username}") ; then
+    if ! IFS=":" read _ _ _ _ _ userdir _ < <(getent passwd -- "${username}") ; then
         echo "ERROR: Could not get home dir of user '${username}'" >&2
         return 1
     fi
@@ -123,10 +126,11 @@ p.use-profile(){
         ORIGINAL_USER=${USER} \
         ORIGINAL_HOME=${HOME} \
         ORIGINAL_LOGNAME=${LOGNAME} \
+        USE_PROFILE_ROOT=${use_profile_root} \
         bash --init-file ${profile} ${dbg}
 }
 
-p.use-profile $@
+p.use-profile "$@"
 
 
 # NOTES ABOUT DISPLAY

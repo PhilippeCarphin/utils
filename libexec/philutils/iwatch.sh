@@ -45,7 +45,7 @@ run(){
 
     printf "==== event : \033[35m${event}\033[0m ====\n"
     printf "running \033[1m$*\033[0m\n"
-    "$@" &
+    bash -c "$*" &
     child_pid=$!
     caught_term=0
     wait ${child_pid}

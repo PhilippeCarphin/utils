@@ -1,0 +1,13 @@
+#!/bin/bash
+while true ; do
+    if ! superproject_root="$(command git rev-parse --show-superproject-working-tree)" ; then
+        exit 1
+    fi
+
+    if [[ -z "${superproject_root}" ]] ; then
+        command git rev-parse --show-toplevel
+        exit $?
+    fi
+
+    cd ${superproject_root}
+done

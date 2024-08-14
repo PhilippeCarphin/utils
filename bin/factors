@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+import sys
+import argparse
+import collections
+
+DESCRIPTION="""
+    Factorization tools using naïve algorithms
+"""
+
+def get_args():
+    p = argparse.ArgumentParser(description="Print factors of an integer")
+    p.add_argument("number", type=int, help="Number to factorize")
+    p.add_argument("--pairs", "-p", action="store_true", help="Show as (f,q) pairs where f*q == number")
+    p.add_argument("--primes", action="store_true", help="Give prime decomposition")
+    p.add_argument("--mult", action="store_true", help="When listing primes, group repeated primes and show multiplicity")
+    p.add_argument("--common", type=int, help="Print common factors")
+    return p.parse_args()
+
+def factors_gen_pairs(n):
+    for i in range(1, int(n ** 0.5) + 1):
+        q, r = divmod(n, i)
+        if r == 0:
+            yield (i, q)
+
+def factors_gen(n):
+    for i,q in factors_gen_pairs(n):
+        yield i
+        yield q
+
+def is_prime(p):
+    gen = factors_gen_pairs(p)
+    next(gen)
+    try:
+        next(gen)
+    except StopIteration:
+        return True
+    else:
+        return False
+
+def prime_factors_gen(n):
+    if n == 2:
+        yield 2
+    d=2
+    while(d*d<=n):
+        while(n>1):
+            while n%d==0:
+                yield d
+                n=n/d
+            d+=1
+
+def prime_factors(n):
+    return list(prime_factors_gen(n))
+
+def factors_pairs(n):
+    return list(sorted(set(factors_gen_pairs(n))))
+
+def factors(n):
+    return list(sorted(set(factors_gen(n))))
+
+def common_factors_gen(a,b):
+    fact_a = set(factors_gen(a))
+    fact_b = set(factors_gen(b))
+    common = fact_a.intersection(fact_b)
+    for c in common:
+        yield (c, a // c, b // c)
+
+args = get_args()
+
+if args.pairs:
+    print(factors_pairs(args.number))
+elif args.primes:
+    if args.mult:
+        d = collections.defaultdict(lambda: 0)
+        for p in prime_factors_gen(args.number):
+            d[p] += 1
+        l = ((f"{p}^{m}" if m > 1 else f"{p}") for p,m in d.items())
+        print(f"[{', '.join(l)}]")
+    else:
+        print(prime_factors(args.number))
+else:
+    if args.common is not None:
+        print(f"(c, {args.number}//c, {args.common}//c)")
+        print(list(common_factors_gen(args.number, args.common)))
+    else:
+        print(factors(args.number))

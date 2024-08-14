@@ -8,6 +8,7 @@
 #       troubleshooting another user's profile, it is important that USER be the
 #       username of the other user because they may have '$USER' somewhere in
 #       what we are troubleshooting.
+#
 # 2. Load extra tools from to help with troubleshooting
 #    a) vc: Find and open either a script from PATH or the file defining a shell
 #       function
@@ -16,6 +17,7 @@
 #       where a shell function is defined.
 #    c) TODO: Add a function to dump the other user's environment to a file
 #       like p.env(){ env -0 | sort -z | tr '\0' '\n' ; }
+#
 # 3. Source the other user's ~/.profile.  Because we use the --init-file flag
 #    get full control of the startup, the other user's ~/.profile does not get
 #    sourced automatically even if we add '-l' or '--login'.  The '--login' flag
@@ -101,13 +103,14 @@ if [ -n "${BASH_VERSION-}" ] ; then
        fi
 fi
 
-package_dir="$(cd "$(dirname $0)/.." && pwd)"
+package_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+echo "package_dir=${package_dir}"
 if [[ -f "${package_dir}/etc/profile.d/vc.bash" ]] ; then
     source "${package_dir}/etc/profile.d/vc.bash"
 fi
 
 #
-# If someone does `PS1="$(whoami): ...", it bakes my username into the prompt
+# If someone does `PS2="$(whoami): ...", it bakes my username into the prompt
 # so we change whoami before that happens so that my modified whoami bakes
 # their username into the prompt.  Also this modified version of whoami improves
 # the illusion that I am the other user.  Doing the same for id

@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # This enhances the `cd` builtin to understand the ':' magic pathspec for
 # git repos.  With git, paths beginning with ':' are understood to be
@@ -17,7 +18,7 @@
 #   delegate to git_cd simply because the switching functions look at ${1} and
 #   ${COMP_WORDS[1]} to see if it contains a ':' # - If ~/.inputrc contains 'set colored-stats on' or 'set visible-stats on', they
 #   will have no effect on how completions are displayed for paths starting
-#   with a ':'.  I haven't figured out how to 
+#   with a ':'.  I haven't figured out how to
 
 ################################################################################
 # Complete paths starting with ':' starting from the root of the current git
@@ -46,6 +47,8 @@ _gcps_complete_colon_paths(){
     local cur prev words cword git_repo
     _init_completion || return;
 
+    # Because of COMP_WORDBREAKS, this checks for a command line word that
+    # begins with ':'.
     if [[ "${cur}" != ':' ]] && [[ "${prev}" != : ]] ; then
         _gcps_complete_non_colon_path
     else
@@ -57,8 +60,16 @@ _gcps_complete_cd(){
     compopt -o filenames
     local cur prev words cword git_repo
     _init_completion || return;
+    local compgen_opt=-d
+    local filedir_opt=-d
+
+    # See note about COMP_WORDBREAKS
     if [[ "${cur}" != ':' ]] && [[ "${prev}" != : ]] ; then
         _cd
+        # The _cd function doesn't care if it puts in the same directory twice
+        # because people don't expect from 'cd' that it adds a space when
+        # completion can no longer continue.  However I do care.  Note that
+        # this loses array information
         COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
         _gcps_handle_single_candidate "" -d
     else
@@ -74,12 +85,12 @@ _gcps_get_root_superproject_2(){
     local current=${1}
     local superproject_root
     while true ; do
-        if ! superproject_root="$(command cd "${current}" && git rev-parse --show-superproject-working-tree)" ; then
+        if ! superproject_root="$(command cd "${current}" && command git rev-parse --show-superproject-working-tree)" ; then
             return 1
         fi
 
         if [[ -z "${superproject_root}" ]] ; then
-            (cd ${current} && git rev-parse --show-toplevel)
+            (cd ${current} && command git rev-parse --show-toplevel)
             return 0
         fi
 
@@ -89,12 +100,12 @@ _gcps_get_root_superproject_2(){
 
 _gcps_get_root_superproject()(
     while true ; do
-        if ! superproject_root="$(git rev-parse --show-superproject-working-tree)" ; then
+        if ! superproject_root="$(command git rev-parse --show-superproject-working-tree)" ; then
             return 1
         fi
 
         if [[ -z "${superproject_root}" ]] ; then
-            git rev-parse --show-toplevel
+            command git rev-parse --show-toplevel
             return 0
         fi
 
@@ -118,19 +129,12 @@ _gcps_resolve_git_colon_path(){
     echo "${repo_dir}${1#:}"
 }
 
-#
-# Only works for commands.  If you want to do it for a shell function
-# you can edit the code of the shell function yourself if it is one
-# of your shell functions.  Otherwise, I'm afraid I can't do anything
-# for you.
-#
 gcps_wrap_command_colon_paths(){
     local cmd="${1}"
     shift
 
     declare -a args
-    local i=0
-    local arg
+    local arg=()
     for arg in "$@" ; do
         local new_arg
         case "${arg}" in
@@ -139,19 +143,18 @@ gcps_wrap_command_colon_paths(){
                     echo "${FUNCNAME[0]} ERROR see above"
                     return 1
                 fi
+                echo "'${arg}' -> '${new_arg}'" 1>&2
                 ;;
             *)
                 new_arg="${arg}"
                 ;;
         esac
-        args[i++]="${new_arg}"
+        args+=("${new_arg}")
     done
 
-    # if [[ -n GIT_COLONPATH_VERBOSE ]] ; then
-    #     printf "command %s %s\n" "${cmd}" "${args[*]}"
-    # fi
     ${cmd} "${args[@]}"
 }
+
 ################################################################################
 # Perform directory completion with an extra twist.  Normally, standard filename
 # completion will add a space when there is only one candidate and it is not a
@@ -176,13 +179,6 @@ _gcps_complete_non_colon_path(){
     _gcps_handle_single_candidate "" "${compgen_opt}"
 }
 
-# _gcps_complete_cd(){
-#     _cd
-#     local IFS=$'\n'
-#     COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
-#     _gcps_handle_single_candidate "" -d
-# }
-
 
 _gcps_complete_true_colon_path(){
     if ! git_repo="$(_gcps_get_root_superproject ${PWD} 2>/dev/null)" ; then
@@ -205,6 +201,7 @@ _gcps_complete_true_colon_path(){
         relative_path="${full_path##${git_repo}}"
         COMPREPLY[i++]="${relative_path}"
     done
+        COMPREPLY=($(echo "${COMPREPLY[*]}" | sort | uniq))
 
     _gcps_handle_single_candidate ${git_repo} ${compgen_opt}
 }
@@ -214,7 +211,15 @@ _gcps_handle_single_candidate(){
     local compgen_opt=${2}
     if ((${#COMPREPLY[@]} == 1)) ; then
         # Eval echo is to resolve anything that starts with '~'
-        local only_candidate="$(eval echo ${prefix:+${prefix}/}${COMPREPLY[0]})"
+        local only_candidate="${prefix:+${prefix}/}${COMPREPLY[0]}"
+        __expand_tilde_by_ref only_candidate
+        if [[ -f ${COMPREPLY[0]} ]] ; then
+            compopt +o nospace
+            compopt -o filenames
+            return
+        fi
+
+        declare -p COMPREPLY >> ~/.log.txt
         if [[ -d ${only_candidate} ]] ; then
             COMPREPLY[0]+=/;
             only_candidate+=/
@@ -223,15 +228,16 @@ _gcps_handle_single_candidate(){
         if [[ ${compgen_opt} == "-d" ]] ; then
             find_opt=(-type d)
         fi
+
+        local search_dir=${only_candidate}
+
         #
         # Determine directory to search to decide if completion should continue
-        # or not.  Note: _gcps_complete_non_colon_path delegates to _cd to produce
+        # or not.  Note: _gcps_complete_cd delegates to _cd to produce
         # candidates which handles CDPATH so this is the only place where it
         # needs to be handled.
         #
-        local search_dir=${only_candidate}
         if ! [[ -d ${only_candidate} ]] ; then
-            # Then look in CDPATH
             local OIFS=$IFS ; IFS=:
             for d in ${CDPATH} ; do
                 if [[ -d ${d}/${only_candidate} ]] ; then
@@ -242,8 +248,8 @@ _gcps_handle_single_candidate(){
             IFS=${OIFS}
         fi
 
-        #if [[ $(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}") == ${only_candidate} ]] ; then
-        local nb_sub=$(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}" 2>/dev/null | wc -l)
+        local sub=( $(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}") )
+        local nb_sub=${#sub[@]}
         # Note: use [[ -eq ]] or (( == )) for arithmetic equal to disregard
         # spaces in $nb_sub.  On MacOS, 'wc -l' outputs the number with leading
         # space which becomes something like [[ '    1' == 1 ]] which evaluates

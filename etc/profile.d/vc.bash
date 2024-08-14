@@ -2,8 +2,25 @@
 # Open commands in $PATH or the file containing the definition of a shell
 # function.
 #
+_vc_usage(){
+    cat <<-EOF
+	usage: vc CMD
+
+	Open file where CMD is defined.  CMD can be
+	- A shell function: vc will open the file where the function is defined
+	  at the first line of the function
+	- An executable script in PATH: vc will open the file
+	- A non-executable file in PATH if the shell option 'sourcepath' is active.
+	I don't know what vc means, I named it that because of the stack overflow
+	question that inspired me to make this tool.
+	EOF
+}
 
 vc(){
+    if [[ "$1" == "--help" ]] ; then
+        _vc_usage
+        return 0
+    fi
     local cmd="${1}"
     local alias_str
     if [[ -n ${VC_EXPAND_ALIASES} ]] ; then
