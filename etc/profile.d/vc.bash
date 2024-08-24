@@ -46,7 +46,16 @@ vc(){
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
         echo "${FUNCNAME[0]}: ${cmd} is '${file}' from PATH" >&2
-        vim ${file}
+        local file_result="$(file ${file})"
+        local file_result_first_line="${file_result%%$'\n'*}"
+        local open_file=y
+        case "${file_result_first_line}" in
+            *ASCII*|*UTF-8*) ;;
+            *) read -p "File '${file}' is not ASCII or UTF-8 text, still open? [y/n] > " open_file ;;
+        esac
+        if [[ "${open_file}" == y ]] ; then
+            vim ${file}
+        fi
         return
     fi
 
