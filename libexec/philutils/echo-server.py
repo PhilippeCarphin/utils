@@ -51,9 +51,11 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         # Print body in various ways depending on type
         #
         request_dict = None
+        request_body_data = None
         if 'Content-Length' in self.headers:
             content_length = int(self.headers['Content-Length'])
-            request_body = self.rfile.read(content_length).decode('utf-8')
+            request_body_data = self.rfile.read(content_length)
+            request_body = request_body_data.decode('utf-8')
             if self.headers['Content-Type'] == 'application/json':
                 print("JSON body\n==============")
                 request_dict = json.loads(request_body)
@@ -69,14 +71,11 @@ class MyServer(http.server.BaseHTTPRequestHandler):
             elif self.headers['Content-Type'].startswith('multipart/form-data'):
                 print("Form data\n=========")
                 s = request_body.split("\r")[0][2:]
+                print(f"DEBUG: request_body = '{request_body}'")
+                print(f"DEBUG: s = '{s}'")
                 p = multipart.MultipartParser(BytesIO(multipart.to_bytes(request_body)),s)
-                parts = p.parts()
-                while True:
-                    try:
-                        item = parts.pop()
-                        print(f"\033[1;33mForm item: '{item.name}': '{item.value}'\033[0m")
-                    except IndexError:
-                        break
+                for item in p.parts():
+                    print(f"\033[1;33mForm item: '{item.name}': '{item.value}'\033[0m")
             else:
                 print(f"\nRequest body\n============\n\033[1;33m{request_body}\033[0m")
 
@@ -95,9 +94,7 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         # --forward=<gitlab-url> and it will forward the request to that url
         if args.forward:
             headers = {**self.headers};
-            print(headers)
-            if 'Content-Length' in headers:
-                del headers['Content-Length']
+            # print(headers)
             if 'Host' in headers:
                 if args.forward.startswith('https://'):
                     headers['Host'] = args.forward[8:]
@@ -105,20 +102,42 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                     headers['Host'] = args.forward[7:]
                 else:
                     headers['Host'] = args.forward
-            if request_dict:
-                headers['Content-Type'] = 'application/json'
-                method_func = getattr(requests, method.lower())
-                print(method_func)
-                resp = method_func(
-                        args.forward + self.path,
-                        headers=headers,
-                        data=bytes(json.dumps(request_dict), encoding='UTF-8'))
-                if 'Content-Type' in resp.headers and resp.headers['Content-Type'] == 'application/json':
+            method_func = getattr(requests, method.lower())
+            # print(method_func)
+            resp = method_func(
+                    args.forward + self.path,
+                    headers=headers,
+                    data=request_body_data
+            )
+            print(f"resp={resp}")
+            print(f"response headers: {resp.headers}")
+            if 'Content-Length' in resp.headers:
+                content_length = int(resp.headers['Content-Length'])
+                if self.headers['Content-Type'] == 'application/json':
                     pprint(resp.json())
                 else:
-                    print("forwarded request: Only JSON responses supported")
+                    resp_body_data = self.rfile.read(content_length)
+                    resp_data = resp_body_data.decode('utf-8')
+                    print(f"resp_data: {resp_data}")
             else:
-                print("reqest forwarding: Only requests with JSON payload can be forwarded")
+                print("No 'Content-Length' in response headers of forwarded request")
+
+            # if request_dict:
+            #     # Probably we already have this header.
+            #     headers['Content-Type'] = 'application/json'
+            #     # Make the outgoing request have the same method as the
+            #     # incoming request
+            #     method_func = getattr(requests, method.lower())
+            #     print(method_func)
+            #     if 'Content-Type' in resp.headers and resp.headers['Content-Type'] == 'application/json':
+            #         resp = method_func(
+            #                 args.forward + self.path,
+            #                 headers=headers,
+            #                 data=bytes(json.dumps(request_dict), encoding='UTF-8'))
+            #         pprint(resp.json())
+            #         print("forwarded request: Only JSON responses supported")
+            # else:
+            #     print("reqest forwarding: Only requests with JSON payload can be forwarded")
         if args.to_curl:
             print(f"CURL request")
             print(f"curl -X {method} \\")
