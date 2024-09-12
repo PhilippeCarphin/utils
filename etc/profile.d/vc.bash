@@ -36,7 +36,7 @@ vc(){
     fi
 
     echo "${FUNCNAME[0]}: Looking for shell function '${cmd}'" >&2
-    open_shell_function "${cmd}" ; case $? in
+    open-shell-function "${cmd}" ; case $? in
         0) return 0 ;; # We're back from opening the shell function
         1) ;; # cmd is not a shell function, try other things
         2) return 1 ;; # ${cmd} is a shell function but its file doesn't exist
@@ -54,7 +54,7 @@ vc(){
             *) read -p "File '${file}' is not ASCII or UTF-8 text, still open? [y/n] > " open_file ;;
         esac
         if [[ "${open_file}" == y ]] ; then
-            vim ${file}
+            command vim ${file}
         fi
         return
     fi
@@ -67,7 +67,7 @@ vc(){
     file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" ! -executable -type f -print -quit)"
     if [[ -n "${file}" ]] ; then
         echo "${FUNCNAME[0]}: ${cmd} is non-executable file '${file}' from PATH" >&2
-        vim ${file}
+        command vim ${file}
         return
     fi
 }
@@ -144,8 +144,21 @@ _vc(){
 ################################################################################
 # Open the file containing the definition of the supplied shell function
 ################################################################################
-open_shell_function(){
+open-shell-function(){
     (
+        if [[ "$1" == "--help" ]] ; then
+            echo "Usage:"
+            echo ""
+            echo "    ${FUNCNAME[0]} FUNCTION"
+            echo ""
+            echo "Open the file containing the definition of a shell function"
+            echo "The builtin \`declare -F\` is used to obtain the location. It"
+            echo "gives the path that was used to source the file containing the"
+            echo "definition.  Therefore, if the file was sourced using a"
+            echo "relative path, then we will be missing the PWD at the time of"
+            echo "sourcing."
+            return 0
+        fi
 
         local -r shell_function="${1}"
 
@@ -183,21 +196,12 @@ open_shell_function(){
         fi
 
         echo "vc: Opening '${file}'"
-        vim ${file} +${lineno}
+        command vim ${file} +${lineno}
     )
 }
 
-_open_shell_function(){
-    local cur prev words cword
-    _init_completion || return
-
-    local candidates=( $(compgen -c ${cur}) )
-    local i=0
-    for c in "${candidates[@]}" ; do
-        if ! command which ${c} &>/dev/null ; then
-            COMPREPLY[i++]=${c}
-        fi
-    done
+_open-shell-function(){
+    COMPREPLY=( $(compgen -A function -- ${COMP_WORDS[COMP_CWORD}) )
 }
 
 
@@ -231,5 +235,5 @@ whence()(
 )
 
 complete -F _vc vc whence
-complete -F _open_shell_function open_shell_function
+complete -F _open-shell-function open-shell-function
 
