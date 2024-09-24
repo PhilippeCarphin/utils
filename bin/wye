@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -euEo pipefail
+shopt -s inherit_errexit
+
+usage(){
+	cat <<-'EOF'
+		Like the UNIX tool 'tee' but with the letter 'Y'
+
+		Print each line from STDIN to STDOUT *and* STDERR
+		Useful to put in between two programs of a pipeline
+		such as `A | wye | B` to see on STDERR what A is sending
+		to B's STDIN.
+
+		Options:
+		    -h, --help             Print this help message
+		    -p, --prefix PREFIX    Prepend PREFIX to each line going to
+		                           STDERR.
+	EOF
+}
+
+main(){
+
+    declare prefix
+    while (($#)) ; do
+        case $1 in
+            -h|--help) usage ; return 0 ;;
+            -p|--prefix) prefix=$2 ; shift ;;
+        esac
+        shift
+    done
+
+    while read l ; do
+        echo "${prefix}${l}" >&2
+        echo "$l" >&1
+    done
+}
+
+main $@
