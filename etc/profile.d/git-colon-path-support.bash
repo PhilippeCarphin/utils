@@ -248,13 +248,13 @@ _gcps_handle_single_candidate(){
             IFS=${OIFS}
         fi
 
-        local sub=( $(find -L ${search_dir} -maxdepth 1 "${find_opt[@]}") )
-        local nb_sub=${#sub[@]}
-        # Note: use [[ -eq ]] or (( == )) for arithmetic equal to disregard
-        # spaces in $nb_sub.  On MacOS, 'wc -l' outputs the number with leading
-        # space which becomes something like [[ '    1' == 1 ]] which evaluates
-        # to false.
-        if [[ ${nb_sub} -eq 1 ]] ; then
+        # Note slash is to search content in case ${search_dir} is a link to a
+        # directory.  Using 'find -L ${search_dir}' has the same effect except
+        # that when find comes upon a filesystem loop, it prints that to stderr
+        # and whenever possible, I don't want to do 2>/dev/null because I don't
+        # want to miss future error messages.
+        local sub=$(find ${search_dir}/ -mindepth 1 -maxdepth 1 "${find_opt[@]}" -printf .)
+        if (( ${#sub} == 1)); then
             compopt +o filenames
         else
             compopt -o nospace
