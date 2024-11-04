@@ -1,0 +1,45 @@
+#!/usr/bin/env -S bash -o errexit -o nounset -o errtrace -O inherit_errexit -O nullglob
+case ${1:-} in
+    registered|checked-out) ;;
+    *) echo "ERROR: Argument must be either 'registered' or 'checked-out'" ; exit 1 ;;
+esac
+
+repo_dir=$(command git rev-parse --show-toplevel)
+if ! [[ -f ${repo_dir}/.gitmodules ]] ; then
+    echo "ERROR: This repo has no submodules" >&2
+    exit 1
+fi
+submodule_directories=($(git submodule foreach --quiet 'echo $PWD' | sed "s|^${repo_dir}/||" | sort))
+declare -i max_length=0
+for s in "${submodule_directories[@]}" ; do
+    if (( ${#s} > max_length )) ; then
+        max_length=${#s}
+    fi
+done
+
+case $1 in
+    checked-out) echo "=================== Currently checked out commits in submodules =============="
+                 echo "Green X means same as registered sha, red means different"
+                 ;;
+    registered)  echo "===== Submodule commits registered to the currently checked out super-project commit  ======"
+                 echo "Green X means same as currently checked out sha, red means different"
+                 ;;
+esac
+
+
+for s in "${submodule_directories[@]}" ; do
+    registered_sha=$(git rev-parse :${s})
+    checked_out_sha=$(env -C ${repo_dir}/${s} git log -n 1 --format=%H)
+    mark=$'\033[32mX\033[0m'
+    if [[ "${registered_sha}" != "${checked_out_sha}" ]] ; then
+        mark=$'\033[31mX\033[0m'
+    fi
+    case $1 in
+        registered) the_sha=${checked_out_sha} ;;
+        checked-out) the_sha=${checked_out_sha} ;;
+    esac
+    printf "\033[1;37m%-${max_length}s\033[0m %s %s\n" \
+        "${s}" \
+        "${mark}" \
+        "$(env -C ${repo_dir}/${s} git -c color.ui=always log -n 1 --format="%C(yellow)%h%C(reset)%<(30,trunc)%C(auto)%d%C(cyan)%s%C(reset)" ${the_sha})"
+done
