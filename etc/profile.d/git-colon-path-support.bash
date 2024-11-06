@@ -213,7 +213,7 @@ _gcps_handle_single_candidate(){
         # Eval echo is to resolve anything that starts with '~'
         local only_candidate="${prefix:+${prefix}/}${COMPREPLY[0]}"
         __expand_tilde_by_ref only_candidate
-        if [[ -f ${COMPREPLY[0]} ]] ; then
+        if [[ -f ${only_candidate} ]] ; then
             compopt +o nospace
             compopt -o filenames
             return
