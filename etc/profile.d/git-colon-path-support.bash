@@ -254,7 +254,7 @@ _gcps_handle_single_candidate(){
         # and whenever possible, I don't want to do 2>/dev/null because I don't
         # want to miss future error messages.
         local sub=$(find ${search_dir}/ -mindepth 1 -maxdepth 1 "${find_opt[@]}" -printf .)
-        if (( ${#sub} == 1)); then
+        if (( ${#sub} == 0)); then
             compopt +o filenames
         else
             compopt -o nospace
