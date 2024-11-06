@@ -29,9 +29,10 @@ esac
 
 for s in "${submodule_directories[@]}" ; do
     registered_sha=$(git rev-parse :${s})
-    checked_out_sha=$(env -C ${repo_dir}/${s} git log -n 1 --format=%H)
-    mark=$'\033[32mX\033[0m'
-    if [[ "${registered_sha}" != "${checked_out_sha}" ]] ; then
+    checked_out_sha=$(env -C ${repo_dir}/${s} git rev-parse HEAD)
+    if [[ "${registered_sha}" == "${checked_out_sha}" ]] ; then
+        mark=$'\033[32mX\033[0m'
+    else
         mark=$'\033[31mX\033[0m'
     fi
     case $1 in
