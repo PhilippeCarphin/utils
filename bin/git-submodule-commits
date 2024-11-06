@@ -36,7 +36,7 @@ for s in "${submodule_directories[@]}" ; do
         mark=$'\033[31mX\033[0m'
     fi
     case $1 in
-        registered) the_sha=${checked_out_sha} ;;
+        registered) the_sha=${registered_sha} ;;
         checked-out) the_sha=${checked_out_sha} ;;
     esac
     printf "\033[1;37m%-${max_length}s\033[0m %s %s\n" \
