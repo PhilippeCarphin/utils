@@ -241,23 +241,35 @@ _gcps_handle_single_candidate(){
             local OIFS=$IFS ; IFS=:
             for d in ${CDPATH} ; do
                 if [[ -d ${d}/${only_candidate} ]] ; then
-                    search_dir=${d}/${only_candidate}
+                    # Note slash is to search content in case ${search_dir} is a link to a
+                    # directory.  Using 'find -L ${search_dir}' has the same effect except
+                    # that when find comes upon a filesystem loop, it prints that to stderr
+                    # and whenever possible, I don't want to do 2>/dev/null because I don't
+                    # want to miss future error messages.
+                    # The slash is added here and not in the find command because if
+                    # only_candidate is a broken link, to a file, adding the / there
+                    # (find ${search_dir}/ ...) would produce errors.
+                    search_dir=${d}/${only_candidate}/
                     break
                 fi
             done
             IFS=${OIFS}
         fi
 
-        # Note slash is to search content in case ${search_dir} is a link to a
-        # directory.  Using 'find -L ${search_dir}' has the same effect except
-        # that when find comes upon a filesystem loop, it prints that to stderr
-        # and whenever possible, I don't want to do 2>/dev/null because I don't
-        # want to miss future error messages.
-        local sub=$(find ${search_dir}/ -mindepth 1 -maxdepth 1 "${find_opt[@]}" -printf .)
-        if (( ${#sub} == 0)); then
-            compopt +o filenames
-        else
+        # Without a slash, the find command seems to be fine with search_dir
+        # being a broken link.
+        local sub=$(find ${search_dir} -mindepth 1 -maxdepth 1 "${find_opt[@]}" -print -quit)
+        if [[ -n "${sub}" ]] ; then
+            # Completion should continue, do not add a space
             compopt -o nospace
+        else
+            # Completion should end.  We already have a single candidate
+            # so by turning off 'nospace' a space will be added.
+            compopt +o nospace
+            # We also need to turn off 'filenames' because if it is on
+            # it will prevent the addition of a space when our single
+            # candidate is a directory.
+            compopt +o filenames
         fi
     elif ((${#COMPREPLY[@]} == 0)) ; then
         #
