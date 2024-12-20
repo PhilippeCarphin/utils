@@ -1,0 +1,42 @@
+#!/bin/bash
+
+case $1 in
+    -h) exec cat <<-EOF
+		$0 EXPR [EXPR...]
+
+		Highlight occurences of EXPR in STDIN with ANSI colors.
+        Use \`$(basename $0) --help\` or \`man $(basename $0)\` for more info
+		EOF
+        ;;
+    --help) exec man $(basename $0) ;;
+esac
+
+illegal_args=("^\[?3?[123456]?m?$" $'\\x1b') # ex [31m, 32m, ...
+
+declare -i color=31
+subst=""
+first=true
+for re in "$@" ; do
+
+    if ! ${first} ; then
+        for ia in "${illegal_args[@]}" ; do
+            if [[ -z ${re} ]] ; then
+                continue
+            fi
+            if [[ "${re}" =~ ${ia} ]] || [[ "${re}" == "${ia}" ]] ; then
+                printf "$0: \033[33mWARNING\033[0m: Argument '%q' is part of ANSI codes and will match stuff that $0 adds when highlighting previous expressions.  Consider making it the first expression\n" "${ia}" >&2
+            fi
+        done
+    fi
+    first=false
+
+    if [[ -n ${re} ]] ; then
+        subst+="s/$re/\x1b[1;${color}m&\x1b[0m/g; "
+    fi
+
+    color=$(( 31 + (( (color + 1) - 31) % 6) ))
+
+done
+
+sed --unbuffered "${subst}"
+# echo "subst = '$subst'"

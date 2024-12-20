@@ -1,0 +1,119 @@
+#+TITLE:hl
+
+* NAME
+
+hl - highlight
+
+* SYNOPSIS
+
+#+begin_src
+hl EXPR [EXPR...]
+#+end_src
+
+* DESCRIPTION
+
+Hilights occurences of =EXPR= in text from =STDIN= using the basic ANSI colors.
+
+Each expression =EXPR= is highlighted in its own color in the order
+- Red (31)
+- Green (32)
+- Yellow (33)
+- Blue (34)
+- Magenta (35)
+- Cyan (36)
+and the order repeats if more than 6 expressions are provided.
+
+* EXIT STATUS
+
+lists the possible exit status values of a program and the conditions that cause these values to be returned. This section should only appear for Section 1 and 8 manual pages.
+
+* BUGS
+
+** Exprssions that match things inserted by =hl= itself
+Since this program works by replacing =EXPR= with e.g. =\033[31mEXPR\033[0m=,
+this places characters that could match subsequent epxressions.  For example
+
+#+begin_src
+echo "Hello World" | hl World m
+#+end_src
+
+Even though the initial input contains no occurences of the letter 'm', after
+the first replacement, there are now 'm's wich will match the second
+expression.
+
+After the first replacement, we will have
+#+begin_src
+Hello \x1b[31mWorld\x1b[0m"
+#+end_src
+and after the second
+#+begin_src
+Hello \x1b[31\x1b[32mm\x1b[0mWorld\x1b[0\x1b[32mm\x1b[0m"
+#+end_src
+which will be =Hello mWorldm= with the two =m='s in green and =World=
+unhighlighted.
+
+There is no reason to find solutions for these problems since they can only
+happen if we intentionnally make them happen.
+
+Another case is highlighting two words where the second one is the first word
+with an extram 'm'.
+#+begin_src
+echo "This man did utter the phrase" | hl utter mutter
+#+end_src
+After the first replacement we have
+#+begin_src
+This man did \x1b[31mutter\x1b[0m the phrase"
+#+end_src
+which now contains the word 'mutter' and after the second we have
+#+begin_src
+This man did \x1b[31\x1b[32mmutter\x1b[0m\x1b[0m the phrase"
+#+end_src
+which is "This man did mutter the phrase" with "mutter" in green.
+
+This program is *not* meant to be robust and finding a way to fix this or to
+detect these situations (i.e. one argument is equal to a previous argument
+with an extra 'm' at the start) is not worth the work given that we really
+need to try pretty hard to make them happen.
+
+
+** Words matched by more than one expression
+*** Subsequent argument is part of a previous one
+#+begin_src
+echo "Hello World" | hl World or
+#+end_src
+
+This gives
+
+#+begin_src
+Hello \x1b[31mW\x1b[32mor\x1b[0mld\x1b[0m
+#+end_src
+(Red 'W', green 'or' and everything else unhighlighted)
+
+*** Previous argument is part of a subsequent one
+#+begin_src
+echo "Hello World" | hl or World
+#+end_src
+This gives
+#+begin_src
+Hello W\x1b[31mor\x1b[0mld
+#+end_src
+(Red 'or' and nothing else highlighted) because after the first replacement,
+the string does not contain the string 'World' because of the inserted ANSI
+codes.
+
+
+* EXAMPLE
+
+#+begin_src
+make | hl "error" "" "warning"
+#+end_src
+
+Highlight the word "error" in red and the word "warning" in yellow.  Note the
+empty argument to skip the color green.
+
+Selecting the colors was not part of the design of this program but it can
+still be achieved by providing empty arguments.
+
+* AUTHORS
+
+Philippe Carphin
