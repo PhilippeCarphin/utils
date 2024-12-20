@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 
 main(){
@@ -43,7 +43,7 @@ main(){
         #
         kill ${run_pid} 2>/dev/null
         wait ${run_pid}
-        setsid bash -c 'run "$@"' "${cmd[*]}" "${cmd[@]}" &
+        bash -c 'run "$@"' "${cmd[*]}" "${cmd[@]}" &
         run_pid=$!
 
         #
