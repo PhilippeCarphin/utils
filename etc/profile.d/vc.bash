@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # Open commands in $PATH or the file containing the definition of a shell
 # function.
@@ -64,7 +65,7 @@ vc(){
     fi
 
     echo "${FUNCNAME[0]}: Looking for sourceable file in PATH" >&2
-    file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" ! -executable -type f -print -quit)"
+    file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" ! -perm -100 -type f -print -quit)"
     if [[ -n "${file}" ]] ; then
         echo "${FUNCNAME[0]}: ${cmd} is non-executable file '${file}' from PATH" >&2
         command vim ${file}
@@ -87,7 +88,7 @@ _vc_add_path_sourceable(){
 #
 _vc_add_path_sourceable_find(){
     local IFS=$': \n'
-    for f in $(find -L ${PATH} -maxdepth 1 -name "${cur}*" ! -executable -readable) ; do
+    for f in $(find -L ${PATH} -maxdepth 1 -name "${cur}*" ! -perm -100 -perm -600) ; do
         local file_result="$(file -L ${f})"
         if ! ( [[ "${file_result}" == *ASCII* ]] || [[ "${file_result}" == *UTF-8* ]] ) ; then
             continue
@@ -195,7 +196,7 @@ open-shell-function(){
             return 2
         fi
 
-        echo "vc: Opening '${file}'"
+        echo "vc: Opening '${file}' at line ${lineno}"
         command vim ${file} +${lineno}
     )
 }
@@ -205,34 +206,50 @@ _open-shell-function(){
 }
 
 
-whence()(
+whence(){
 
+    local follow_link
+    if [[ $1 == -r ]] ; then
+        follow_link=true
+        shift
+    fi
     local -r cmd=$1
 
     if alias ${cmd} 2>/dev/null ; then
-        : return
+        return
     fi
 
+    local reset_extdebug=$(shopt -p extdebug)
     shopt -s extdebug
-    local func
-    if func=$(declare -F ${cmd}) ; then
-        echo "${func}"
-        : return
+
+    local func file info link realpath
+    # Shell function
+    if info=$(declare -F ${cmd}) ; then
+        if [[ -n ${follow_link} ]] ; then
+            if ! file=$(echo ${info} | cut -d ' ' -f 3) ; then
+                echo "Could not extract file from declare -F output" >&2
+            fi
+            realpath=" ~ $(realpath ${file})"
+        fi
+        echo "${info}${realpath}"
+        return
     fi
 
-    local file
+    # File from PATH
     if file=$(command which ${cmd} 2>/dev/null) ; then
-        echo "${file}"
-        : return
+        : good
+    elif file="$(find -L $(echo $PATH | tr ':' ' ') -mindepth 1 -maxdepth 1 -name "${cmd}" ! -perm -100 -type f)" ; then
+        : good
+    else
+        return 1
     fi
 
-    file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" ! -executable -type f)"
-    if [[ -n "${file}" ]] ; then
-        echo ${file}
-        : return
+    if [[ -n ${follow_link} ]] ; then
+        realpath=" ~ $(realpath ${file})"
     fi
-
-)
+    echo "${file}${realpath}"
+    ${reset_extdebug}
+}
 
 complete -F _vc vc whence
 complete -F _open-shell-function open-shell-function
