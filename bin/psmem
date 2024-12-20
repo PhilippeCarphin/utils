@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""
+Get memory usage of a process or processes
+"""
+
+import psutil
+import os
+import argparse
+
+p = argparse.ArgumentParser(description=__doc__)
+g = p.add_mutually_exclusive_group()
+p.add_argument("pids", metavar='PID', nargs='*', type=int, help="Process ID(s) to get memory info for", default=[os.getppid()])
+p.add_argument("-f", action='store_true', help="Show command line")
+g.add_argument("--human", action='store_true', help="Display sizes in human readable format")
+g.add_argument("--unit", choices=['B', 'K', 'M', 'G'], help="Memory units.  The number is printed in the selected unit but the unit itself is not printed because this is meant to be consumed by another program", default='B')
+
+FACTORS = { 'B': 1, 'K': 10e3, 'M': 10e6, 'G': 10e9 }
+
+args = p.parse_args()
+
+def get_memory_info(pid):
+    proc = psutil.Process(pid)
+    return proc.memory_info()
+
+def get_proc_rss(pid):
+    return get_memory_info(pid).rss
+
+def select_unit(nbytes):
+    if nbytes < 1000:
+        return 'B'
+    if nbytes < 10e6:
+        return 'K'
+    if nbytes < 10e9:
+        return 'M'
+    return 'G'
+
+def nbytes_to_unit(nbytes, unit):
+    return nbytes / FACTORS[unit]
+
+def get_memory_usage_str(proc, args):
+    nbytes = proc.memory_info().rss
+    if args.human:
+        unit = select_unit(nbytes)
+        n_unit = nbytes / FACTORS[unit]
+        return f"{n_unit:.2f}{unit}"
+    else:
+        n_unit = nbytes / FACTORS[args.unit]
+        return str(n_unit)
+
+procs = [ psutil.Process(pid) for pid in args.pids ]
+
+if len(procs) == 1:
+    if args.f:
+        print(f"{get_memory_usage_str(procs[0], args)}\t{' '.join(proc.cmdline())}")
+    else:
+        print(f"{get_memory_usage_str(procs[0], args)}")
+else:
+    for proc in procs:
+        if args.f:
+            print(f"{proc.pid}\t{get_memory_usage_str(proc, args)}\t{' '.join(proc.cmdline()).strip()}")
+        else:
+            print(f"{proc.pid}\t{get_memory_usage_str(proc, args)}")
+
+
