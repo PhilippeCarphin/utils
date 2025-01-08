@@ -38,5 +38,5 @@ for re in "$@" ; do
 
 done
 
-sed --unbuffered "${subst}"
+sed -u "${subst}"
 # echo "subst = '$subst'"
