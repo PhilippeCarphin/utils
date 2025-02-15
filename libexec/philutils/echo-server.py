@@ -27,25 +27,43 @@ def get_args():
 
 class MyServer(http.server.BaseHTTPRequestHandler):
     def generic_handler(self,method):
+        response_dict = {}
         qp = urllib.parse.urlparse(self.path)
         path, query = qp.path, qp.query
         print(f"\n\033[1;4mIncoming \033[34m{method}\033[39m request on path = \033[35m{path}\033[0m")
         print(self.requestline)
+        response_dict['method'] = method
+        response_dict['requestline'] = self.requestline
+        response_dict['full-path'] = self.path
+        response_dict['path'] = path
+        response_dict['raw-query'] = query
+        response_dict['warnings'] = []
 
         #
         # Print urldecoded query parameters
         #
         if query:
+            response_dict['query'] = {}
             print(f"Query Parameters\n================\033[35m")
-            for k,v in map(lambda kv: kv.split("="), query.split('&')): # What's the point of urlparse if I have to do this myself?
-                v = urllib.parse.unquote(v)
-                print(f"{k}: {v}")
+            query_parts = query.split('&')
+            for kv in query_parts:
+                try:
+                    k, v = kv.split("=")
+                    v = urllib.parse.unquote(v)
+                    print(f"\033[35m{k}: {v}\033[0m")
+                    response_dict['query'][k] = v
+                except ValueError as e:
+                    err = f"Query part '{kv}' does not contain equal sign"
+                    response_dict['warnings'].append(err)
+            # for k,v in map(lambda kv: kv.split("="), query.split('&')): # What's the point of urlparse if I have to do this myself?
             print("\033[0m", end='')
         #
         # Print headers
         #
+        response_dict['Headers'] = {}
         print(f"Headers\n=======\033[36m")
         for k,v in self.headers.items():
+            response_dict['Headers'][k] = [v]
             print(f"\033[36m'{k}': '{v}'\033[0m")
         #
         # Print body in various ways depending on type
@@ -59,6 +77,7 @@ class MyServer(http.server.BaseHTTPRequestHandler):
             if self.headers['Content-Type'] == 'application/json':
                 print("JSON body\n==============")
                 request_dict = json.loads(request_body)
+                response_dict['json-body'] = request_dict
                 if use_jq:
                     p = subprocess.Popen(['jq'], stdin=subprocess.PIPE, universal_newlines=True)
                     p.stdin.write(request_body)
@@ -69,14 +88,17 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                     pprint(request_dict)
                     print("\033[0m", end='')
             elif self.headers['Content-Type'].startswith('multipart/form-data'):
+                response_dict['form-data'] = {}
                 print("Form data\n=========")
                 s = request_body.split("\r")[0][2:]
                 print(f"DEBUG: request_body = '{request_body}'")
                 print(f"DEBUG: s = '{s}'")
                 p = multipart.MultipartParser(BytesIO(multipart.to_bytes(request_body)),s)
                 for item in p.parts():
+                    response_dict['form-data'][k] = v
                     print(f"\033[1;33mForm item: '{item.name}': '{item.value}'\033[0m")
             else:
+                response_dict['request-body'] = request_body
                 print(f"\nRequest body\n============\n\033[1;33m{request_body}\033[0m")
 
         # These methods must be called in an order that reflects the HTTP protocol
@@ -85,7 +107,7 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        self.wfile.write(bytes(json.dumps({"message": "Hello World"},indent='    ') + '\n', 'utf-8'))
+        self.wfile.write(bytes(json.dumps(response_dict, indent='    ') + '\n', 'utf-8'))
 
         #
         # Suppose you want to figure out what requests the gitlab-runner makes
