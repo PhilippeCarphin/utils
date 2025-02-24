@@ -23,7 +23,11 @@ def get_args():
     p.add_argument("--curl-notes", action='store_true', help="Print curl notes and exit")
     p.add_argument("--to-curl", action='store_true', help="Print equivalent cURL request of received requests")
     p.add_argument("--forward", help="Address to forward request to")
-    return p.parse_args()
+    p.add_argument("--allowed-origins", help="Comma separated list of allowed origins")
+    args = p.parse_args()
+    if args.allowed_origins:
+        args.allowed_origins = args.allowed_origins.split(",")
+    return args
 
 class MyServer(http.server.BaseHTTPRequestHandler):
     def generic_handler(self,method):
@@ -38,6 +42,42 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         response_dict['path'] = path
         response_dict['raw-query'] = query
         response_dict['warnings'] = []
+        response_dict['info'] = []
+
+        response_headers = {}
+
+        #
+        # CORS stuff
+        #
+        origin = None
+        origin_domain = None
+        origin_allowed = False
+        if 'Origin' in self.headers:
+            origin = self.headers['Origin']
+            if origin.startswith('https://'):
+                origin_domain = origin[8:]
+            elif origin.startswith('http://'):
+                origin_domain = origin[7:]
+            msg = f"Origin domain is '{origin_domain}'"
+        else:
+            msg = f"No 'Origin' in header.  This should have been set by the user agent"
+        response_dict['info'].append(msg)
+
+        if origin and args.allowed_origins and origin_domain in args.allowed_origins:
+            origin_allowed = True
+            msg = f"Origin {origin} is in allowed hosts"
+            response_dict['info'].append(msg)
+            response_headers["Access-Control-Allow-Origin"] = origin
+        elif 'Sec-Fetch-Site' in self.headers and self.headers['Sec-Fetch-Site'] == 'same-origin':
+            origin_allowed = True
+            msg = f"Same origin request.  No CORS header needed"
+            response_dict['info'].append(msg)
+        else:
+            msg = f"Origin '{origin}' is not allowed but for demonstration purposes, we are sending a response anyway"
+            response_dict['info'] = msg
+            # send_response(403)
+            # return
+        response_dict['info'].append(msg)
 
         #
         # Print urldecoded query parameters
@@ -106,6 +146,9 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         # be rejected by the other application.
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
+        if response_headers:
+            for k,v in response_headers.items():
+                self.send_header(k,v)
         self.end_headers()
         self.wfile.write(bytes(json.dumps(response_dict, indent='    ') + '\n', 'utf-8'))
 
