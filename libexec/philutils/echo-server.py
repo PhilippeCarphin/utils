@@ -83,6 +83,16 @@ class MyServer(http.server.BaseHTTPRequestHandler):
             # return
 
         #
+        # CORS Preflight: Assume that the only time we get a request with
+        # method OPTIONS, that it is a CORS preflight request.
+        #
+        if method == "OPTIONS":
+            response_headers['Access-Control-Allow-Origin'] = origin
+            response_headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+            response_headers['Access-Control-Allow-Headers'] = 'X-PINGOTHER, Content-Type'
+            response_headers['Access-Control-Max-Age'] = '86400'
+
+        #
         # Print urldecoded query parameters
         #
         if query:
@@ -231,6 +241,8 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         self.generic_handler("DELETE")
     def do_PUT(self):
         self.generic_handler("PUT")
+    def do_OPTIONS(self):
+        self.generic_handler("OPTIONS")
 
 args = get_args()
 if args.curl_notes:
