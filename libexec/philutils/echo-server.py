@@ -61,23 +61,26 @@ class MyServer(http.server.BaseHTTPRequestHandler):
             msg = f"Origin domain is '{origin_domain}'"
         else:
             msg = f"No 'Origin' in header.  This should have been set by the user agent"
+        print(f"\033[1;35mINFO\033[0m: {msg}")
         response_dict['info'].append(msg)
 
         if origin and args.allowed_origins and origin_domain in args.allowed_origins:
             origin_allowed = True
             msg = f"Origin {origin} is in allowed hosts"
             response_dict['info'].append(msg)
+            print(f"\033[1;35mINFO\033[0m: {msg}")
             response_headers["Access-Control-Allow-Origin"] = origin
         elif 'Sec-Fetch-Site' in self.headers and self.headers['Sec-Fetch-Site'] == 'same-origin':
             origin_allowed = True
             msg = f"Same origin request.  No CORS header needed"
+            print(f"\033[1;35mINFO\033[0m: {msg}")
             response_dict['info'].append(msg)
         else:
             msg = f"Origin '{origin}' is not allowed but for demonstration purposes, we are sending a response anyway"
+            print(f"\033[1;35mINFO\033[0m: {msg}")
             response_dict['info'] = msg
             # send_response(403)
             # return
-        response_dict['info'].append(msg)
 
         #
         # Print urldecoded query parameters
