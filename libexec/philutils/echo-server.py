@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import http.server
+import http.cookies
 from pprint import pprint
 import json
 import argparse
@@ -28,6 +29,11 @@ def get_args():
     if args.allowed_origins:
         args.allowed_origins = args.allowed_origins.split(",")
     return args
+
+def parse_cookie(s):
+    cookies = http.cookies.SimpleCookie()
+    cookies.load(s)
+    return [{"name": k, "value": v.value, "properties": v} for k,v in cookies.items()]
 
 class MyServer(http.server.BaseHTTPRequestHandler):
     def generic_handler(self,method):
@@ -132,8 +138,11 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         response_dict['Headers'] = {}
         print(f"Headers\n=======\033[36m")
         for k,v in self.headers.items():
-            response_dict['Headers'][k] = [v]
             print(f"\033[36m'{k}': '{v}'\033[0m")
+            if k in ['Cookie', 'cookie']:
+                response_dict['Headers'][k] = parse_cookie(v)
+            else:
+                response_dict['Headers'][k] = [v]
         #
         # Print body in various ways depending on type
         #
