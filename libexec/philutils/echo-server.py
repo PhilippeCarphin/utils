@@ -31,7 +31,27 @@ def get_args():
 
 class MyServer(http.server.BaseHTTPRequestHandler):
     def generic_handler(self,method):
-        response_dict = {}
+        # pprint(self.__dict__)
+        response_dict = {
+            'warnings': [],
+            'info': [],
+        }
+        response_headers = {}
+
+        #
+        # TCP STUFF
+        #
+        response_dict["client_address"] = self.client_address
+        print(f"\033[1;35mRequest origin address: {self.client_address}\033[0m")
+        print(f"\033[1;35mRequest connection: {self.connection}\033[0m")
+        response_dict["connection"] = {
+            "laddr": self.connection.getsockname(),
+            "raddr": self.connection.getpeername()
+        }
+
+        #
+        # PATH AND METHOD
+        #
         qp = urllib.parse.urlparse(self.path)
         path, query = qp.path, qp.query
         print(f"\n\033[1;4mIncoming \033[34m{method}\033[39m request on path = \033[35m{path}\033[0m")
@@ -41,10 +61,6 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         response_dict['full-path'] = self.path
         response_dict['path'] = path
         response_dict['raw-query'] = query
-        response_dict['warnings'] = []
-        response_dict['info'] = []
-
-        response_headers = {}
 
         #
         # CORS stuff
