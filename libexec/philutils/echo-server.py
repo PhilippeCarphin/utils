@@ -31,9 +31,15 @@ def get_args():
     return args
 
 def parse_cookie(s):
+    # Like I have observed in Clojure with ring.middleware.cookies, it looks
+    # like the SimpleCookie object has all the attributes that could be put in a
+    # Set-Cookie header even though here we are receiving cookies through the
+    # Cookie header which I don't think can have any attributes.
     cookies = http.cookies.SimpleCookie()
     cookies.load(s)
-    return [{"name": k, "value": v.value, "properties": v} for k,v in cookies.items()]
+    # This is what we could do to show the "expires", "path", "max-age"...
+    # return [{"name": k, "value": v.value, "properties": v} for k,v in cookies.items()]
+    return [{"name": k, "value": v.value} for k,v in cookies.items()]
 
 class MyServer(http.server.BaseHTTPRequestHandler):
     def generic_handler(self,method):
@@ -135,14 +141,21 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         #
         # Print headers
         #
-        response_dict['Headers'] = {}
+        header_dict = {}
         print(f"Headers\n=======\033[36m")
         for k,v in self.headers.items():
             print(f"\033[36m'{k}': '{v}'\033[0m")
             if k in ['Cookie', 'cookie']:
-                response_dict['Headers'][k] = parse_cookie(v)
+                header_dict[k] = parse_cookie(v)
             else:
-                response_dict['Headers'][k] = [v]
+                if k in header_dict:
+                    if isinstance(header_dict[k], list):
+                        header_dict[k].append(v)
+                    else:
+                        heacer_dict[k] = [header_dict[k], v]
+                else:
+                    header_dict[k] = [v]
+        response_dict['Headers'] = header_dict
         #
         # Print body in various ways depending on type
         #
