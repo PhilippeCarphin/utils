@@ -52,7 +52,7 @@ vc(){
         # Result is of the for '<name>: <information>'
         # and we need to remove name because it could contain the word 'text'
         # and less likely but still possible: ASCII or UTF-8.
-        local without_filename="${file_result_fist_line#*:}"
+        local without_filename="${file_result_first_line#*:}"
         local open_file=y
         case "${without_filename}" in
             *ASCII*|*UTF-8*|*text*) ;;
