@@ -54,7 +54,7 @@ vc(){
     echo "${FUNCNAME[0]}: Looking for executable '${cmd}' in PATH" >&2
     local file
     if file=$(command which ${cmd} 2>/dev/null) ; then
-        echo "${FUNCNAME[0]}: ${cmd} is '${file}' from PATH" >&2
+        echo "${FUNCNAME[0]}: ... '${cmd}' is '${file}' from PATH" >&2
         local file_result="$(file -L ${file})"
         local file_result_first_line="${file_result%%$'\n'*}"
         # Result is of the for '<name>: <information>'
@@ -64,12 +64,14 @@ vc(){
         local open_file=y
         case "${without_filename}" in
             *ASCII*|*UTF-8*|*text*) ;;
-            *) read -p "File '${file}' is not ASCII or UTF-8 text, still open? [y/n] > " open_file ;;
+            *) read -p "${FUNCNAME[0]}: File '${file}' is not ASCII or UTF-8 text, still open? [y/n] > " open_file ;;
         esac
         if [[ "${open_file}" == y ]] ; then
             command vim ${file}
         fi
         return
+    else
+        echo "${FUNCNAME[0]}: ... '${cmd}' is not an executable in PATH" >&2
     fi
 
     if ! shopt -q sourcepath ; then
@@ -79,9 +81,11 @@ vc(){
     echo "${FUNCNAME[0]}: Looking for sourceable file in PATH" >&2
     file="$(find -L $(echo $PATH | tr ':' ' ') -name "${cmd}" ! -perm -100 -type f -print -quit)"
     if [[ -n "${file}" ]] ; then
-        echo "${FUNCNAME[0]}: ${cmd} is non-executable file '${file}' from PATH" >&2
+        echo "${FUNCNAME[0]}: ... ${cmd} is non-executable file '${file}' from PATH" >&2
         command vim ${file}
         return
+    else
+        echo "${FUNCNAME[0]}: ... '${cmd}' is not a sourceable file in PATH" >&2
     fi
 }
 
@@ -184,7 +188,7 @@ open-shell-function(){
 
     local info=$(declare -F ${shell_function})
     if [[ -z "${info}" ]] ; then
-        echo "vc: No info from 'declare -F' for '${shell_function}'" >&2
+        echo "vc: ... '${shell_function}' is not a shell function" >&2
         ${reset_extdebug}
         return 1
     fi
@@ -213,7 +217,7 @@ open-shell-function(){
         return 2
     fi
 
-    echo "vc: Opening '${file}' at line ${lineno}" >&2
+    echo "vc: ... Shell function '${cmd}' found: Opening '${file}' at line ${lineno}" >&2
     if command vim ${file} +${lineno} ; then
         if [[ ${source_func_file} == true ]] ; then
             echo "sourcing file '${file}'" >&2
