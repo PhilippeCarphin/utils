@@ -11,6 +11,7 @@ from io import BytesIO
 import subprocess
 import urllib
 import requests
+import logging
 
 check_jq = subprocess.run(['which', 'jq'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 use_jq = (check_jq.returncode == 0)
@@ -25,10 +26,19 @@ def get_args():
     p.add_argument("--to-curl", action='store_true', help="Print equivalent cURL request of received requests")
     p.add_argument("--forward", help="Address to forward request to")
     p.add_argument("--allowed-origins", help="Comma separated list of allowed origins")
+    p.add_argument("--debug", action='store_true')
+    p.add_argument("--cert")
+    p.add_argument("--key")
     args = p.parse_args()
     if args.allowed_origins:
         args.allowed_origins = args.allowed_origins.split(",")
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    if args.cert or args.key:
+        if not (args.cert and args.key):
+            p.error("Both or none of --cert and --key must be specified")
     return args
+
 
 def parse_cookie(s):
     # Like I have observed in Clojure with ring.middleware.cookies, it looks
@@ -43,16 +53,13 @@ def parse_cookie(s):
 
 class MyServer(http.server.BaseHTTPRequestHandler):
     def generic_handler(self,method):
-        # pprint(self.__dict__)
         response_dict = {
             'warnings': [],
             'info': [],
         }
         response_headers = {}
 
-        #
         # TCP STUFF
-        #
         response_dict["client_address"] = self.client_address
         print(f"\033[1;35mRequest origin address: {self.client_address}\033[0m")
         print(f"\033[1;35mRequest connection: {self.connection}\033[0m")
@@ -61,9 +68,7 @@ class MyServer(http.server.BaseHTTPRequestHandler):
             "raddr": self.connection.getpeername()
         }
 
-        #
         # PATH AND METHOD
-        #
         qp = urllib.parse.urlparse(self.path)
         path, query = qp.path, qp.query
         print(f"\n\033[1;4mIncoming \033[34m{method}\033[39m request on path = \033[35m{path}\033[0m")
@@ -74,55 +79,25 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         response_dict['path'] = path
         response_dict['raw-query'] = query
 
-        #
-        # CORS stuff
-        #
-        origin = None
-        origin_domain = None
-        origin_allowed = False
-        if 'Origin' in self.headers:
-            origin = self.headers['Origin']
-            if origin.startswith('https://'):
-                origin_domain = origin[8:]
-            elif origin.startswith('http://'):
-                origin_domain = origin[7:]
-            msg = f"Origin domain is '{origin_domain}'"
+        self.set_cors_stuff(method, response_dict, response_headers)
+        self.print_query(query, response_dict)
+        self.print_headers(response_dict)
+        request_dict, request_body_data = self.print_body(response_dict)
+        if args.to_curl:
+            self.print_curl_request(method, request_dict)
+
+        if args.forward:
+            self.forward_request(method, request_body_data, args.forward)
         else:
-            msg = f"No 'Origin' in header.  This should have been set by the user agent"
-        print(f"\033[1;35mINFO\033[0m: {msg}")
-        response_dict['info'].append(msg)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            if response_headers:
+                for k,v in response_headers.items():
+                    self.send_header(k,v)
+            self.end_headers()
+            self.wfile.write(bytes(json.dumps(response_dict, indent='    ') + '\n', 'utf-8'))
 
-        if origin and args.allowed_origins and origin_domain in args.allowed_origins:
-            origin_allowed = True
-            msg = f"Origin {origin} is in allowed hosts"
-            response_dict['info'].append(msg)
-            print(f"\033[1;35mINFO\033[0m: {msg}")
-            response_headers["Access-Control-Allow-Origin"] = origin
-        elif 'Sec-Fetch-Site' in self.headers and self.headers['Sec-Fetch-Site'] == 'same-origin':
-            origin_allowed = True
-            msg = f"Same origin request.  No CORS header needed"
-            print(f"\033[1;35mINFO\033[0m: {msg}")
-            response_dict['info'].append(msg)
-        else:
-            msg = f"Origin '{origin}' is not allowed but for demonstration purposes, we are sending a response anyway"
-            print(f"\033[1;35mINFO\033[0m: {msg}")
-            response_dict['info'] = msg
-            # send_response(403)
-            # return
-
-        #
-        # CORS Preflight: Assume that the only time we get a request with
-        # method OPTIONS, that it is a CORS preflight request.
-        #
-        if method == "OPTIONS":
-            response_headers['Access-Control-Allow-Origin'] = origin
-            response_headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-            response_headers['Access-Control-Allow-Headers'] = 'X-PINGOTHER, Content-Type'
-            response_headers['Access-Control-Max-Age'] = '86400'
-
-        #
-        # Print urldecoded query parameters
-        #
+    def print_query(self, query, response_dict):
         if query:
             response_dict['query'] = {}
             print(f"Query Parameters\n================\033[35m")
@@ -136,29 +111,10 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                 except ValueError as e:
                     err = f"Query part '{kv}' does not contain equal sign"
                     response_dict['warnings'].append(err)
-            # for k,v in map(lambda kv: kv.split("="), query.split('&')): # What's the point of urlparse if I have to do this myself?
             print("\033[0m", end='')
-        #
-        # Print headers
-        #
-        header_dict = {}
-        print(f"Headers\n=======\033[36m")
-        for k,v in self.headers.items():
-            print(f"\033[36m'{k}': '{v}'\033[0m")
-            if k in ['Cookie', 'cookie']:
-                header_dict[k] = parse_cookie(v)
-            else:
-                if k in header_dict:
-                    if isinstance(header_dict[k], list):
-                        header_dict[k].append(v)
-                    else:
-                        heacer_dict[k] = [header_dict[k], v]
-                else:
-                    header_dict[k] = [v]
-        response_dict['Headers'] = header_dict
-        #
-        # Print body in various ways depending on type
-        #
+
+
+    def print_body(self, response_dict):
         request_dict = None
         request_body_data = None
         if 'Content-Length' in self.headers:
@@ -182,8 +138,8 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                 response_dict['form-data'] = {}
                 print("Form data\n=========")
                 s = request_body.split("\r")[0][2:]
-                print(f"DEBUG: request_body = '{request_body}'")
-                print(f"DEBUG: s = '{s}'")
+                logging.debug(f"request_body = '{request_body}'")
+                logging.debug(f"s = '{s}'")
                 p = multipart.MultipartParser(BytesIO(multipart.to_bytes(request_body)),s)
                 for item in p.parts():
                     response_dict['form-data'][k] = v
@@ -191,85 +147,137 @@ class MyServer(http.server.BaseHTTPRequestHandler):
             else:
                 response_dict['request-body'] = request_body
                 print(f"\nRequest body\n============\n\033[1;33m{request_body}\033[0m")
+        return request_dict, request_body_data
 
-        # These methods must be called in an order that reflects the HTTP protocol
-        # order of 'status line, headers, payload' otherwise the response may
-        # be rejected by the other application.
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        if response_headers:
-            for k,v in response_headers.items():
-                self.send_header(k,v)
-        self.end_headers()
-        self.wfile.write(bytes(json.dumps(response_dict, indent='    ') + '\n', 'utf-8'))
+
+    def print_headers(self, response_dict):
+        header_dict = {}
+        print(f"Headers\n=======\033[36m")
+        for k,v in self.headers.items():
+            print(f"\033[36m'{k}': '{v}'\033[0m")
+            if k in ['Cookie', 'cookie']:
+                header_dict[k] = parse_cookie(v)
+            else:
+                if k in header_dict:
+                    if isinstance(header_dict[k], list):
+                        header_dict[k].append(v)
+                    else:
+                        heacer_dict[k] = [header_dict[k], v]
+                else:
+                    header_dict[k] = [v]
+        response_dict['Headers'] = header_dict
+
+
+    def set_cors_stuff(self, method, response_dict, response_headers):
+        origin = None
+        origin_domain = None
+        origin_allowed = False
+        if 'Origin' in self.headers:
+            origin = self.headers['Origin']
+            if origin.startswith('https://'):
+                origin_domain = origin[8:]
+            elif origin.startswith('http://'):
+                origin_domain = origin[7:]
+            msg = f"Origin domain is '{origin_domain}'"
+        else:
+            msg = f"No 'Origin' in header.  This should have been set by the user agent"
+        logging.info(msg)
+        response_dict['info'].append(msg)
+
+        if origin and args.allowed_origins and origin_domain in args.allowed_origins:
+            origin_allowed = True
+            msg = f"Origin {origin} is in allowed hosts"
+            response_dict['info'].append(msg)
+            logging.info(msg)
+            response_headers["Access-Control-Allow-Origin"] = origin
+        elif 'Sec-Fetch-Site' in self.headers and self.headers['Sec-Fetch-Site'] == 'same-origin':
+            origin_allowed = True
+            msg = f"Same origin request.  No CORS header needed"
+            logging.info(msg)
+            response_dict['info'].append(msg)
+        else:
+            msg = f"Origin '{origin}' is not allowed but for demonstration purposes, we are sending a response anyway"
+            logging.info(msg)
+            response_dict['info'] = msg
 
         #
-        # Suppose you want to figure out what requests the gitlab-runner makes
-        # to gitlab, you can register a runner normally but then edit the URL
-        # in ~/.gitlab-runner/config.toml to be this echo server.  Call it with
-        # --forward=<gitlab-url> and it will forward the request to that url
-        if args.forward:
-            headers = {**self.headers};
-            # print(headers)
-            if 'Host' in headers:
-                if args.forward.startswith('https://'):
-                    headers['Host'] = args.forward[8:]
-                elif args.forward.startswith('http://'):
-                    headers['Host'] = args.forward[7:]
-                else:
-                    headers['Host'] = args.forward
-            method_func = getattr(requests, method.lower())
-            # print(method_func)
-            resp = method_func(
-                    args.forward + self.path,
-                    headers=headers,
-                    data=request_body_data
-            )
-            print(f"resp={resp}")
-            print(f"response headers: {resp.headers}")
-            if 'Content-Length' in resp.headers:
-                content_length = int(resp.headers['Content-Length'])
-                if self.headers['Content-Type'] == 'application/json':
-                    pprint(resp.json())
-                else:
-                    resp_body_data = self.rfile.read(content_length)
-                    resp_data = resp_body_data.decode('utf-8')
-                    print(f"resp_data: {resp_data}")
-            else:
-                print("No 'Content-Length' in response headers of forwarded request")
+        # CORS Preflight: Assume that the only time we get a request with
+        # method OPTIONS, that it is a CORS preflight request.
+        #
+        if method == "OPTIONS":
+            response_headers['Access-Control-Allow-Origin'] = origin
+            response_headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+            response_headers['Access-Control-Allow-Headers'] = 'X-PINGOTHER, Content-Type'
+            response_headers['Access-Control-Max-Age'] = '86400'
 
-            # if request_dict:
-            #     # Probably we already have this header.
-            #     headers['Content-Type'] = 'application/json'
-            #     # Make the outgoing request have the same method as the
-            #     # incoming request
-            #     method_func = getattr(requests, method.lower())
-            #     print(method_func)
-            #     if 'Content-Type' in resp.headers and resp.headers['Content-Type'] == 'application/json':
-            #         resp = method_func(
-            #                 args.forward + self.path,
-            #                 headers=headers,
-            #                 data=bytes(json.dumps(request_dict), encoding='UTF-8'))
-            #         pprint(resp.json())
-            #         print("forwarded request: Only JSON responses supported")
-            # else:
-            #     print("reqest forwarding: Only requests with JSON payload can be forwarded")
-        if args.to_curl:
-            print(f"CURL request")
-            print(f"curl -X {method} \\")
-            for k,v in self.headers.items():
-                if k == 'Host':
-                    print(f'    -H "{k}: ${{host}}" \\')
-                elif k == 'Content-Length':
-                    # cURL will compute the content lenght automatically and add
-                    # it to the headers of the request without us having to specify
-                    # it on the command line
-                    continue
-                else:
-                    print(f'    -H "{k}: {v}" \\')
-            if request_dict:
-                print(f"    --data '{json.dumps(request_dict)}' \\")
-            print(f"    \"$URL{self.path}\"")
+
+    def forward_request(self, method, data, forward):
+        logging.info(f"Forwarding request to {args.forward}")
+        headers = {**self.headers};
+        print(f"headers={headers}")
+        if 'Host' in headers:
+            if forward.startswith('https://'):
+                headers['Host'] = forward[8:]
+            elif forward.startswith('http://'):
+                headers['Host'] = forward[7:]
+            else:
+                headers['Host'] = forward
+        method_func = getattr(requests, method.lower())
+
+        resp = method_func(
+                forward + self.path, # self.path includes query
+                headers=headers,
+                data=data
+        )
+        print(f"resp={resp}")
+        print(f"response headers: {resp.headers}")
+        if 'Content-Length' in resp.headers:
+            content_length = int(resp.headers['Content-Length'])
+            if self.headers['Content-Type'] == 'application/json':
+                pprint(resp.json())
+            else:
+                resp_body_data = self.rfile.read(content_length)
+                resp_data = resp_body_data.decode('utf-8')
+                print(f"resp_data: {resp_data}")
+        elif 'Content-Type' in resp.headers and resp.headers['Content-Type'] == 'application/json':
+            pprint(resp.json())
+        else:
+            print("No 'Content-Length' in response headers of forwarded request")
+            print(resp.text)
+
+        logging.debug("Sending response received from forwarded request")
+        self.send_response(resp.status_code)
+        if resp.headers:
+            for k,v in resp.headers.items():
+                # We let the requests library handle the chunked response
+                # so in our response to the requester, we send back an
+                # un-chunked response so we need to change the headers of
+                # *our* response accordingly.
+                if v == 'chunked': continue
+                # This one felt like it had to do with chunking too
+                if k == 'Connection' and v == 'keep-alive': continue
+                # We are also sending the response un-encoded so the we
+                # remove this header too.
+                if k == 'Content-Encoding': continue
+                self.send_header(k,v)
+        self.end_headers()
+        self.wfile.write(resp.text.encode('UTF-8'))
+
+
+    def print_curl_request(self, method, request_dict):
+        print(f"CURL request")
+        print(f"curl -X {method} \\")
+        for k,v in self.headers.items():
+            if k == 'Host':
+                print(f'    -H "{k}: ${{host}}" \\')
+            elif k == 'Content-Length':
+                # cURL will do the Content-Length header itself based on the data
+                continue
+            else:
+                print(f'    -H "{k}: {v}" \\')
+        if request_dict:
+            print(f"    --data '{json.dumps(request_dict)}' \\")
+        print(f"    \"$URL{self.path}\"")
 
     def do_GET(self):
         self.generic_handler("GET")
