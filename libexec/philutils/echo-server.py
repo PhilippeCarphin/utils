@@ -1,17 +1,17 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S python3 -u
 
-import http.server
-import http.cookies
-from pprint import pprint
-import json
 import argparse
-import sys
-import multipart
-from io import BytesIO
-import subprocess
-import urllib
-import requests
+import http.cookies
+import http.server
+import io
+import json
 import logging
+import multipart
+import pprint
+import requests
+import subprocess
+import sys
+import urllib
 
 check_jq = subprocess.run(['which', 'jq'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 use_jq = (check_jq.returncode == 0)
@@ -52,6 +52,8 @@ def parse_cookie(s):
     return [{"name": k, "value": v.value} for k,v in cookies.items()]
 
 class MyServer(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def generic_handler(self,method):
         response_dict = {
             'warnings': [],
@@ -82,13 +84,14 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         self.set_cors_stuff(method, response_dict, response_headers)
         self.print_query(query, response_dict)
         self.print_headers(response_dict)
-        request_dict, request_body_data = self.print_body(response_dict)
         if args.to_curl:
             self.print_curl_request(method, request_dict)
 
         if args.forward:
-            self.forward_request(method, request_body_data, args.forward)
+            self.forward_request(method, args.forward)
         else:
+            print("Eum h what")
+            request_dict, request_body_data = self.print_body(response_dict)
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             if response_headers:
@@ -96,6 +99,7 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                     self.send_header(k,v)
             self.end_headers()
             self.wfile.write(bytes(json.dumps(response_dict, indent='    ') + '\n', 'utf-8'))
+        print("End self.generic_handler")
 
     def print_query(self, query, response_dict):
         if query:
@@ -132,7 +136,7 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                     p.wait()
                 else:
                     print("\033[1;32m", end='')
-                    pprint(request_dict)
+                    pprint.pprint(request_dict)
                     print("\033[0m", end='')
             elif self.headers['Content-Type'].startswith('multipart/form-data'):
                 response_dict['form-data'] = {}
@@ -140,13 +144,24 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                 s = request_body.split("\r")[0][2:]
                 logging.debug(f"request_body = '{request_body}'")
                 logging.debug(f"s = '{s}'")
-                p = multipart.MultipartParser(BytesIO(multipart.to_bytes(request_body)),s)
+                p = multipart.MultipartParser(io.BytesIO(multipart.to_bytes(request_body)),s)
                 for item in p.parts():
                     response_dict['form-data'][k] = v
                     print(f"\033[1;33mForm item: '{item.name}': '{item.value}'\033[0m")
             else:
                 response_dict['request-body'] = request_body
                 print(f"\nRequest body\n============\n\033[1;33m{request_body}\033[0m")
+        elif 'Transfer-Encoding' in self.headers and self.headers['Transfer-Encoding'] == 'chunked':
+            while True:
+                l = int(self.rfile.readline().strip(), 16)
+                if l == 0:
+                    print("zero sized chunk indicates end of stream")
+                    break
+                # print(f"line={l}")
+                c = self.rfile.read(int(l))
+                crlf = self.rfile.read(2)
+                # print(f"chunk={c}")
+                sys.stdout.buffer.write(c)
         return request_dict, request_body_data
 
 
@@ -210,10 +225,34 @@ class MyServer(http.server.BaseHTTPRequestHandler):
             response_headers['Access-Control-Allow-Headers'] = 'X-PINGOTHER, Content-Type'
             response_headers['Access-Control-Max-Age'] = '86400'
 
+    def chunk_gen_or_data(self):
+        if 'Transfer-Encoding' in self.headers and self.headers['Transfer-Encoding'] == 'chunked':
+            return self.chunk_gen()
+        elif 'Content-Length' in self.headers:
+            content_length = int(self.headers['Content-Length'])
+            data_to_forward = self.rfile.read(content_length)
+            print(f"data_to_forward: {data_to_forward}")
+            return data_to_forward
+        else:
+            return None
 
-    def forward_request(self, method, data, forward):
+    def chunk_gen(self):
+        """ Generator providing the chunks of this request or the body """
+        while True:
+            size = int(self.rfile.readline().strip(), 16)
+            if size == 0:
+                print("zero sized chunk indicates end of stream")
+                return
+            c = self.rfile.read(size)
+            crlf = self.rfile.read(2)
+            print(f"chunk_to_forward: {c}")
+            yield c
+
+    def forward_request(self, method, forward):
         logging.info(f"Forwarding request to {args.forward}")
         headers = {**self.headers};
+        if 'Connection' in headers and headers['Connection'] == 'keep-alive':
+            del headers['Connection']
         print(f"headers={headers}")
         if 'Host' in headers:
             if forward.startswith('https://'):
@@ -227,23 +266,24 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         resp = method_func(
                 forward + self.path, # self.path includes query
                 headers=headers,
-                data=data
+                data=self.chunk_gen_or_data()
         )
+
         print(f"resp={resp}")
         print(f"response headers: {resp.headers}")
         if 'Content-Length' in resp.headers:
             content_length = int(resp.headers['Content-Length'])
             if self.headers['Content-Type'] == 'application/json':
-                pprint(resp.json())
+                pprint.pprint(resp.json())
             else:
                 resp_body_data = self.rfile.read(content_length)
                 resp_data = resp_body_data.decode('utf-8')
                 print(f"resp_data: {resp_data}")
-        elif 'Content-Type' in resp.headers and resp.headers['Content-Type'] == 'application/json':
-            pprint(resp.json())
+        elif 'Transfer-Encoding' in resp.headers and resp.headers['Transfer-Encoding'] == 'chunked':
+            print("Chunked response to forwarded request")
         else:
-            print("No 'Content-Length' in response headers of forwarded request")
-            print(resp.text)
+            print("Unknowns transfer situation: no Content-Length and not chunked")
+            print(f"resp.text: {resp.text}")
 
         logging.debug("Sending response received from forwarded request")
         self.send_response(resp.status_code)
@@ -253,15 +293,36 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                 # so in our response to the requester, we send back an
                 # un-chunked response so we need to change the headers of
                 # *our* response accordingly.
-                if v == 'chunked': continue
+                # if v == 'chunked': continue
                 # This one felt like it had to do with chunking too
-                if k == 'Connection' and v == 'keep-alive': continue
+                # if k == 'Connection' and v == 'keep-alive': continue
                 # We are also sending the response un-encoded so the we
                 # remove this header too.
-                if k == 'Content-Encoding': continue
+                # if k == 'Content-Encoding': continue
                 self.send_header(k,v)
         self.end_headers()
-        self.wfile.write(resp.text.encode('UTF-8'))
+
+        if 'Transfer-Encoding' in resp.headers and resp.headers['Transfer-Encoding'] == 'chunked':
+            print("BINGBONG!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            bingbong = io.BytesIO()
+            last_chunk_size = 0
+            for chunk in resp.iter_content(chunk_size=1024):
+                self.wfile.write(f"{len(chunk):x}".encode('UTF-8'))
+                self.wfile.write(b'\r\n')
+                self.wfile.write(chunk)
+                self.wfile.write(b'\r\n')
+                last_chunk = chunk
+                last_chunk_size = len(chunk)
+                bingbong.write(chunk)
+            self.wfile.write(b'0\r\n')
+            pprint.pprint(json.loads(bingbong.getvalue().decode('UTF-8')))
+            print(f"Last chunk: {last_chunk}")
+            print(f"Last chunk size = {last_chunk_size}")
+        else:
+            data_to_send_back = resp.text.encode('UTF-8')
+            print(f"Data to send back = {data_to_send_back}")
+            self.wfile.write(data_to_send_back)
+        print("End self.forward_request")
 
 
     def print_curl_request(self, method, request_dict):
@@ -289,6 +350,9 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         self.generic_handler("PUT")
     def do_OPTIONS(self):
         self.generic_handler("OPTIONS")
+    def do_PATCH(self):
+        print("PATCH BINGBONG")
+        self.generic_handler("PATCH")
 
 args = get_args()
 if args.curl_notes:
