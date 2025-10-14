@@ -3,3 +3,5 @@
 *.restore
 __pycache__
 localinstall
+src/*.o
+src/my-builtins.so
