@@ -50,6 +50,10 @@ static void phil_simple_print_command(COMMAND *cmd){
 }
 int split_cmd_builtin (WORD_LIST *list)
 {
+    if(list == NULL){
+        return 0;
+    }
+
     int rval = EXECUTION_SUCCESS;
 
     PARAMS()
@@ -88,7 +92,6 @@ int split_cmd_builtin (WORD_LIST *list)
    function returns 0, the load fails. */
 int shell_split_builtin_load (char *name)
 {
-    fprintf(stderr, "%s(%s)\n", __func__, name);
     return (1);
 }
 
