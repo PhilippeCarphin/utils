@@ -19,7 +19,9 @@
 
 # these should match the ones in Makefile.in (for the make install target)
 
-prefix = $(BASH_DEV_DIR)
+BASH_DEV_DIR ?= /Users/pcarphin/Repositories/github.com/bminor/bash/localinstall
+my_build_dir ?= .
+prefix ?= $(BASH_DEV_DIR)
 exec_prefix = ${prefix}
 libdir = ${exec_prefix}/lib
 
@@ -37,9 +39,13 @@ INC+= -I$(loadablesdir)
 # here, `example' is the name of the shared object
 # replace `example' with the appropriate filename
 
-all:	$(BUILD_DIR)/my-builtins.so
+all:	$(my_build_dir)/my-builtins.so
 
-$(BUILD_DIR)/my-builtins.so:	shell-split.o
-	$(SHOBJ_LD) $(SHOBJ_LDFLAGS) $(SHOBJ_XLDFLAGS) -o $@ $< $(SHOBJ_LIBS)
+$(my_build_dir)/my-builtins.so:	$(my_build_dir)/shell-split.o
+	$(SHOBJ_LD) $(SHOBJ_LDFLAGS) $(SHOBJ_XLDFLAGS) -o $@ $^ $(SHOBJ_LIBS)
 
-shell-split.o: shell-split.c
+$(my_build_dir)/%.o: %.c
+	$(SHOBJ_CC) $(SHOBJ_CFLAGS) $(CCFLAGS) $(INC) -c -o $@ $<
+
+clean:
+	rm -f $(my_build_dir)/shell-split.o $(my_build_dir)/my-builtins.so
