@@ -90,7 +90,6 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         if args.forward:
             self.forward_request(method, args.forward)
         else:
-            print("Eum h what")
             request_dict, request_body_data = self.print_body(response_dict)
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')

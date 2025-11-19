@@ -7,7 +7,7 @@ DESCRIPTION="""
     Factorization tools using naïve algorithms
 """
 
-def get_args():
+def _get_args():
     p = argparse.ArgumentParser(description="Print factors of an integer")
     p.add_argument("number", type=int, help="Number to factorize")
     p.add_argument("--pairs", "-p", action="store_true", help="Show as (f,q) pairs where f*q == number")
@@ -16,6 +16,27 @@ def get_args():
     p.add_argument("--common", type=int, help="Print common factors")
     p.add_argument("--visual", action="store_true", help="Print in human readable format")
     return p.parse_args()
+
+def _main():
+    args = _get_args()
+
+    if args.pairs:
+        print(factors_pairs(args.number))
+    elif args.primes:
+        if args.mult:
+            d = collections.defaultdict(lambda: 0)
+            for p in prime_factors_gen(args.number):
+                d[p] += 1
+            l = ((f"{p}^{m}" if m > 1 else f"{p}") for p,m in d.items())
+            print(f"[{', '.join(l)}]")
+        else:
+            print(prime_factors(args.number))
+    else:
+        if args.common is not None:
+            print(f"(c, {args.number}//c, {args.common}//c)")
+            print(common_factors(args.number, args.common))
+        else:
+            print(factors(args.number))
 
 def factors_gen_pairs(n):
     for i in range(1, int(n ** 0.5) + 1):
@@ -64,6 +85,9 @@ def factors_pairs(n):
 def factors(n):
     return list(sorted(set(factors_gen(n))))
 
+def common_factors(a, b):
+    return list(common_factors_gen(a, b))
+
 def common_factors_gen(a,b):
     fact_a = set(factors_gen(a))
     fact_b = set(factors_gen(b))
@@ -72,6 +96,7 @@ def common_factors_gen(a,b):
         yield (c, a // c, b // c)
 
 
+<<<<<<< HEAD
 def main():
     args = get_args()
     if args.pairs:
@@ -93,5 +118,4 @@ def main():
             print(factors(args.number))
 
 if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+    sys.exit(_main())
