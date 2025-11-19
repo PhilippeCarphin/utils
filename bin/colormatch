@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+
+import sys
+import re
+import argparse
+
+ansi = re.compile(r'\x1b\[[0-7;]*m')
+color_index = 100
+token_colors = {}
+def get_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("-f", "--field", type=int, help="Field number")
+    p.add_argument("-a", "--also", type=str)
+    return p.parse_args()
+
+def parse_word(i):
+    letters = []
+    while True:
+        c = next(i)
+        if c == ' ':
+            letters.append(c)
+        else:
+            letters.append(c)
+            break
+    while True:
+        try:
+            c = next(i)
+        except StopIteration:
+            return ''.join(letters)
+        if c == ' ':
+            return ''.join(letters)
+        else:
+            letters.append(c)
+
+def split_preserve_whitespace(s):
+    words = []
+    i = iter(s)
+    try:
+        while True:
+            words.append(parse_word(i))
+    except StopIteration:
+        return words
+
+
+def next_color():
+    global color_index
+    color_index += 3
+    if color_index > 231:
+        color_index = 20
+    return color_index
+
+lineno = 0
+args = get_args()
+for l in sys.stdin:
+    lineno += 1
+    words = split_preserve_whitespace(l.strip())
+    if len(words) <= args.field:
+        print(f"({' '.join(sys.argv)}: line #{lineno} only has {len(words)} fields", file=sys.stderr)
+        continue
+
+    h = ansi.sub('', words[args.field])
+    if h in token_colors:
+        color = token_colors[h]
+    else:
+        color = next_color()
+        token_colors[h] = color
+
+    words[args.field] = f"\033[38;5;{color}m{h}\033[0m"
+
+    if args.also:
+        if args.also.endswith('+'):
+            n = int(args.also[:-1])
+            trail = ' '.join(words[n:])
+            trail = ansi.sub('', trail)
+            words = words[:n]
+            color_trail=f"\033[38;5;{color}m{trail}\033[0m"
+            words.append(color_trail)
+    print(' '.join(words))
+
