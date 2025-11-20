@@ -124,8 +124,12 @@ id(){
     fi
 }
 
-source $HOME/.profile
-source ${USE_PROFILE_ROOT}/etc/profile.d/vc.bash
+vc_file=$(shopt -s extdebug ; declare -F vc | awk '{print $3}')
+for f in $HOME/.profile ${vc_file} ; do
+    if [[ -f $f ]] ; then
+        source $f
+    fi
+done
 
 if [[ -v DISPLAY ]] && ! [[ -v XAUTHORITY ]] ; then
     printf "p.use-profile: WARNING: Because you have a DISPLAY and no XAUTHORITY you will need to set \`HOME=\${ORIGINAL_HOME}\` to make X11 things work.\n"
@@ -137,7 +141,7 @@ fi
 # every time.
 ################################################################################
 
-if [[ -v USE_PROFILE_ADAPT_PS1 ]] ; then
+if [[ -n ${USE_PROFILE_ADAPT_PS1} ]] ; then
     p.use-profile.adapt_ps1(){
         PS1="$(echo "$PS1" | sed -e 's/\\u/$USER/' -e 's/$ORIGINAL_USER/$USER/')"
     }

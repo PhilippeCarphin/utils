@@ -120,8 +120,12 @@ p.use-profile(){
         echo "    '${v}'"
     done
 
+    if [[ -n ${dbg} ]] ; then
+        set -x
+    fi
     env -i "${base_env[@]}" \
         LOGNAME=${username} \
+        USER=${username} \
         HOME=$userdir \
         ORIGINAL_USER=${USER} \
         ORIGINAL_HOME=${HOME} \
