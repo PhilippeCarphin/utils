@@ -95,8 +95,6 @@ def common_factors_gen(a,b):
     for c in common:
         yield (c, a // c, b // c)
 
-
-<<<<<<< HEAD
 def main():
     args = get_args()
     if args.pairs:
