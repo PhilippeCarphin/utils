@@ -18,7 +18,7 @@ print(args)
 url = sys.stdin.read().strip()
 
 
-if args.decode:
+if args.decode or args.split:
     if args.split:
         parts = urllib.parse.urlparse(url)
         query = parts.query.split('&')
@@ -30,9 +30,12 @@ if args.decode:
         print(f"query: ...")
         if parts.query:
             for qp in query:
-                key, value = map(urllib.parse.unquote, qp.split('=', 1))
-                if args.decode > 1:
+                key, value = qp.split('=', 1)
+                if args.decode:
+                    key = urllib.parse.unquote(key)
                     value = urllib.parse.unquote(value)
+                    if args.decode > 1:
+                        value = urllib.parse.unquote(value)
                 print(f"    \033[1;33m{key}\033[0m=\033[32m{value}\033[0m")
         if parts.fragment:
             print(f"fragment: \033[34m{parts.fragment}\033[0m")
