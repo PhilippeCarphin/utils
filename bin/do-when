@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+
+import argparse
+import time
+import subprocess
+
+p = argparse.ArgumentParser()
+p.add_argument('--when', dest="test", help="Test", required=True)
+p.add_argument('--do', help="Command to run when test succeeds", required=True)
+p.add_argument('--check-interval', help="Check interval in seconds", type=float, default=60.0)
+
+args = p.parse_args()
+print(f"Condition: '{args.test}'")
+print(f"Command when condition succeeds: '{args.do}'")
+
+while True:
+    if subprocess.run(args.test, shell=True).returncode == 0:
+        break
+    time.sleep(args.check_interval)
+
+subprocess.run(args.do, shell=True)

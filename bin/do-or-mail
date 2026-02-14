@@ -1,0 +1,37 @@
+#
+# Hcron either always sends an email or never sends one and we don't get the
+# stderr of the command that failed.  Also it runs it in a non-login shell which
+# doesn't load our profile.
+#
+case $1 in
+    -h|--help) echo "$0 CMD SUBJECT EMAIL" ; exit 0 ;;
+esac
+
+cmd_str="${1}"
+subject="${2}"
+email="${3}"
+filter_indent(){
+    local replace_ansi_with_chars='s/\x1b\(\[[0-9;]*m\)/\\x1b\1/g'
+    sed -e 's/^/    /' -e "${replace_ansi_with_chars}"
+    #sed -e "${replace_ansi_with_chars}"
+}
+
+if ! tmpdir=$(mktemp -d) ; then
+    exit 2
+fi
+
+trap "rm -rf '${tmpdir}'" EXIT
+
+if ! bash -lc "${cmd_str}" 2>${tmpdir}/stderr ; then
+    mail -s "${subject}" ${email} <<- EOF
+	ERROR Running command "${cmd_str}" on "$(hostname --fqdn)"
+
+	STDERR of command is
+	$(cat ${tmpdir}/stderr | filter_indent)
+
+	ENVIRONMENT is
+	$(printenv | filter_indent)
+
+	Have a nice day
+	EOF
+fi
