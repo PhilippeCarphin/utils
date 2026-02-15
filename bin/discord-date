@@ -1,0 +1,17 @@
+#!/usr/bin/env -S bash -o errexit -o nounset -o errtrace -o pipefail -O inherit_errexit -O nullglob -O extglob
+
+if [[ $(uname) == Darwin ]] ; then
+    if ! command -v gdate 2>/dev/null ; then
+        echo "gdate is required on MacOS"
+        exit 1
+    fi
+    date_cmd=gdate
+else
+    date_cmd=date
+fi
+
+ts=$(${date_cmd} -d $1 +%s)
+
+echo "Timestamp ${ts} is $(${date_cmd} -d @$ts)" >&2
+
+echo "<t:${ts}:t>"
