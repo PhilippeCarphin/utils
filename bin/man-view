@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if ! tmp=$(mktemp manpage_XXXXXX); then
+    echo "Could not create temp file"
+    exit 1
+fi
+tmp=$(realpath $tmp)
+trap "rm ${tmp}" EXIT
+
+file=$1
+if ! [[ -e "${file}" ]] ; then
+    echo "File '${file}' does not exist"
+    exit 1
+fi
+cmd=(pandoc -s)
+if [[ $file == *.md ]] ; then
+    cmd+=(--shift-heading-level-by=-1)
+fi
+cmd+=(-t man -o "${tmp}" "${file}")
+if ! "${cmd[@]}" ; then
+    echo "Pandoc command '${cmd[*]}' failed"
+    exit 1
+fi
+man ${tmp}
