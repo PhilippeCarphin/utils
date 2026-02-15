@@ -2,7 +2,7 @@
 
 * NAME
 
-hl - highlight
+hl - filter highlighting multiple regexes in their own colors
 
 * SYNOPSIS
 
@@ -25,11 +25,12 @@ and the order repeats if more than 6 expressions are provided.
 
 * EXIT STATUS
 
-lists the possible exit status values of a program and the conditions that cause these values to be returned. This section should only appear for Section 1 and 8 manual pages.
+Exit status of the undelying =sed= command.
 
 * BUGS
 
 ** Exprssions that match things inserted by =hl= itself
+
 Since this program works by replacing =EXPR= with e.g. =\033[31mEXPR\033[0m=,
 this places characters that could match subsequent epxressions.  For example
 
@@ -56,7 +57,7 @@ There is no reason to find solutions for these problems since they can only
 happen if we intentionnally make them happen.
 
 Another case is highlighting two words where the second one is the first word
-with an extram 'm'.
+with an extra 'm'.
 #+begin_src
 echo "This man did utter the phrase" | hl utter mutter
 #+end_src
@@ -75,9 +76,10 @@ detect these situations (i.e. one argument is equal to a previous argument
 with an extra 'm' at the start) is not worth the work given that we really
 need to try pretty hard to make them happen.
 
-
 ** Words matched by more than one expression
+
 *** Subsequent argument is part of a previous one
+
 #+begin_src
 echo "Hello World" | hl World or
 #+end_src
@@ -90,6 +92,7 @@ Hello \x1b[31mW\x1b[32mor\x1b[0mld\x1b[0m
 (Red 'W', green 'or' and everything else unhighlighted)
 
 *** Previous argument is part of a subsequent one
+
 #+begin_src
 echo "Hello World" | hl or World
 #+end_src
@@ -100,7 +103,6 @@ Hello W\x1b[31mor\x1b[0mld
 (Red 'or' and nothing else highlighted) because after the first replacement,
 the string does not contain the string 'World' because of the inserted ANSI
 codes.
-
 
 * EXAMPLE
 
