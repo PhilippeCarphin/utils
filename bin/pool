@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+
+import multiprocessing
+import datetime
+import argparse
+import logging
+import subprocess
+import os
+import sys
+import logging
+
+DESCRIPTION = """ Use a process pool to complete tasks from a list """
+
+def get_args():
+    p = argparse.ArgumentParser(description=DESCRIPTION)
+    p.add_argument('--nproc', '-j', type=int, default=4)
+    p.add_argument('--log-dir', help="Directory for log files (log everything to stderr if not defined)")
+    p.add_argument('--debug', action='store_true')
+
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--task-file")
+    g.add_argument("--task-dir")
+
+    args = p.parse_args()
+
+    if not args.log_dir:
+        suffix = os.path.basename(args.task_file if args.task_file else args.task_dir)
+        args.log_dir = f"pool-{suffix}-log-dir"
+
+    return args
+
+# Global variables so I don't have to pass them to processes
+args = get_args()
+main_log = f"{args.log_dir}/MainLog.txt"
+
+def main():
+    os.makedirs(args.log_dir, exist_ok=True)
+    tasks = generate_tasks(args)
+    with open(main_log, 'a') as f:
+        f.write(f"Using {args.nproc} processes for {len(tasks)} tasks\n")
+
+    start = datetime.datetime.now()
+    with multiprocessing.Pool(args.nproc) as p:
+        results = p.map(Task.run, tasks)
+    end = datetime.datetime.now()
+
+    with open(main_log, 'a') as f:
+        write_stats(results, start=start, end=end, file=f)
+
+def generate_tasks(args):
+    if args.task_file:
+        if args.task_file == '-':
+            source = sys.stdin
+        else:
+            source = open(args.task_file)
+        return [Task(code=line, number=i) for i,line in enumerate(source.read().splitlines())]
+    elif args.task_dir:
+        return [Task(script=os.path.join(args.task_dir, script)) for script in os.listdir(args.task_dir)]
+
+class Task:
+    def __init__(self, code=None, script=None, number=None):
+        self.code = code
+        self.script = script
+        self.number = number
+        self.log_path = os.path.join(
+            args.log_dir,
+            f"line_{self.number}.log" if self.code else f"script_{os.path.basename(self.script)}.log"
+        )
+
+    def write_main_log(self, entry):
+        with open(main_log, 'a') as f:
+            f.write(entry)
+
+    def run(self):
+        self.start = datetime.datetime.now()
+        self.write_main_log(f"Job {self} started at {self.start}\n")
+        with open(self.log_path, 'w') as log:
+            log.write(f"Started at {self.start}\n")
+            self._run(file=log)
+            log.write(f"end at {self.end}\n")
+            log.write(f"DURATION: {self.duration}\n")
+        self.write_main_log(f"Job {self} ended at {self.end} with returncode {self.returncode} (took {self.duration})\n")
+        return self
+
+    def _run(self, file):
+        start = datetime.datetime.now()
+        if self.code:
+            logging.info(f"running code '{self.code}'")
+            res = subprocess.run(['bash', '-c', self.code], stdout=file, stderr=file)
+            logging.info(f"... END: '{self.code}'")
+        elif self.script:
+            logging.info(f"running script '{self.script}'")
+            res = subprocess.run(['bash', self.script], stdout=file, stderr=file)
+            logging.info(f"... END: '{self.script}'")
+        self.returncode = res.returncode
+        self.end = datetime.datetime.now()
+        self.duration = self.end - self.start
+
+    def __str__(self):
+        return self.code if self.code else self.script
+
+def write_stats(results, start, end, file):
+    if not results:
+        file.write("\n No results\n")
+        return
+
+    file.write(f"\nTotal time: {end - start}\n")
+
+    failed_total = datetime.timedelta()
+    failed_tasks = []
+    failed_durations = []
+
+    success_total = datetime.timedelta()
+    success_durations = []
+
+    for task in results:
+        if task.returncode == 0:
+            success_total += task.duration
+            success_durations.append(task.duration)
+        else:
+            failed_total += task.duration
+            failed_durations.append(task.duration)
+            failed_tasks.append(task)
+
+    if failed_tasks:
+        file.write("\n=============== Failed tasks ===================\n")
+        for task in failed_tasks:
+            file.write(f"FAILED: {task}: see {task.log_path}\n")
+        file.write("\n")
+
+    file.write(f"Total number of tasks: {len(results)}\n")
+
+    if success_durations:
+        file.write("\n")
+        file.write(f"Average duration of successful tasks: {success_total/len(success_durations)}\n")
+        file.write(f"Longest successful task: {max(success_durations)}\n")
+        file.write(f"Shortest successful task: {min(success_durations)}\n")
+
+    if failed_durations:
+        file.write("\n")
+        file.write(f"Average duration of failed tasks: {failed_total/len(failed_durations)}\n")
+        file.write(f"Longest failed task: {max(failed_durations)}\n")
+        file.write(f"Shortest failed task: {min(failed_durations)}\n")
+        file.write(f"\nNumber of failed tasks: {len(failed_tasks)}/{len(results)}\n")
+    else:
+        file.write(f"\nAll tasks have succeeded\n")
+
+if __name__ == "__main__":
+
+    if sys.stderr.isatty():
+        logging.addLevelName(logging.WARNING, "\033[0;33m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+        logging.addLevelName(logging.ERROR,   "\033[0;31m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+        logging.addLevelName(logging.INFO,    "\033[0;35m%s\033[1;0m" % logging.getLevelName(logging.INFO))
+        logging.addLevelName(logging.DEBUG,   "\033[1;00m%s\033[1;0m" % logging.getLevelName(logging.DEBUG))
+
+    FORMAT = "[{processName} {levelname}] {message}"
+    logging.basicConfig(format=FORMAT, style='{', level=logging.INFO)
+    sys.exit(main())
