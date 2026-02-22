@@ -93,11 +93,13 @@ class MyServer(http.server.BaseHTTPRequestHandler):
             request_dict, request_body_data = self.print_body(response_dict)
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
+            body = bytes(json.dumps(response_dict, indent='    ') + '\n', 'utf-8')
+            response_headers['Content-Length'] = len(body)
             if response_headers:
                 for k,v in response_headers.items():
                     self.send_header(k,v)
             self.end_headers()
-            self.wfile.write(bytes(json.dumps(response_dict, indent='    ') + '\n', 'utf-8'))
+            self.wfile.write(body)
         print("End self.generic_handler")
 
     def print_query(self, query, response_dict):
