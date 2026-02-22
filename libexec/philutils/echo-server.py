@@ -116,51 +116,90 @@ class MyServer(http.server.BaseHTTPRequestHandler):
 
 
     def print_body(self, response_dict):
-        request_dict = None
-        request_body_data = None
         if 'Content-Length' in self.headers:
-            content_length = int(self.headers['Content-Length'])
-            request_body_data = self.rfile.read(content_length)
-            request_body = request_body_data.decode('utf-8')
-            if self.headers['Content-Type'] == 'application/json':
-                print("JSON body\n==============")
-                request_dict = json.loads(request_body)
-                response_dict['json-body'] = request_dict
-                if use_jq:
-                    p = subprocess.Popen(['jq'], stdin=subprocess.PIPE, universal_newlines=True)
-                    p.stdin.write(request_body)
-                    p.stdin.close()
-                    p.wait()
-                else:
-                    print("\033[1;32m", end='')
-                    pprint.pprint(request_dict)
-                    print("\033[0m", end='')
-            elif self.headers['Content-Type'].startswith('multipart/form-data'):
-                response_dict['form-data'] = {}
-                print("Form data\n=========")
-                s = request_body.split("\r")[0][2:]
-                logging.debug(f"request_body = '{request_body}'")
-                logging.debug(f"s = '{s}'")
-                p = multipart.MultipartParser(io.BytesIO(multipart.to_bytes(request_body)),s)
-                for item in p.parts():
-                    response_dict['form-data'][k] = v
-                    print(f"\033[1;33mForm item: '{item.name}': '{item.value}'\033[0m")
-            else:
-                response_dict['request-body'] = request_body
-                print(f"\nRequest body\n============\n\033[1;33m{request_body}\033[0m")
+            return self.print_body_from_request_with_content_length(response_dict)
         elif 'Transfer-Encoding' in self.headers and self.headers['Transfer-Encoding'] == 'chunked':
-            while True:
-                l = int(self.rfile.readline().strip(), 16)
-                if l == 0:
-                    print("zero sized chunk indicates end of stream")
-                    break
-                # print(f"line={l}")
-                c = self.rfile.read(int(l))
-                crlf = self.rfile.read(2)
-                # print(f"chunk={c}")
-                sys.stdout.buffer.write(c)
+            return self.print_body_from_chunk_encoded_request(response_dict)
+        else:
+            logger.info("No 'Content-Length' header which might be normal depending on the request type")
+            return None, None
+
+    def print_body_from_chunk_encoded_request(self, response_dict):
+        while True:
+            logger.debug(f"Waiting for hexadecimal integer on one line")
+            line = self.rfile.readline().strip()
+            try:
+                l = int(line, 16)
+            except ValueError as e:
+                logger.error(f"Could not convert '{line}' to integer base 16: {e}")
+                return None, None
+            if l == 0:
+                logger.debug("zero sized chunk indicates end of stream")
+                break
+            logger.debug(f"Got hex integer {l:x} ({l}), waiting for {l} bytes")
+            c = self.rfile.read(l)
+            logger.debug(f"Got hex integer {l:x} ({l}), waiting for {l} bytes")
+            if not self.read_crlf():
+                logger.error("Chunk was not followed by '\\r\\n' or '\\n' waiting for connection to close")
+                # TODO: Remaining bytes look like they are treated as a new
+                # request.  Is that a keep alive thing that reuses the same
+                # connection for multiple requests.
+                return None, None
+            logger.debug(f"Chunk content: {c!r}")
+            sys.stdout.buffer.write(c)
+            if logger.level == logging.DEBUG and not c.endswith(b'\n'):
+                sys.stdout.buffer.write(b'\n')
         return request_dict, request_body_data
 
+    def read_crlf(self):
+        cr_or_lf = self.rfile.read(1)
+        if cr_or_lf == b'\r':
+            lf = self.rfile.read(1)
+            if lf == b'\n':
+                logger.debug(f"read '\\r\\n'")
+            else:
+                logger.debug(f"Failed to read \\r or \\n")
+                return False
+        elif cr_or_lf == b'\n':
+            logger.debug(f"read '\\n'")
+        else:
+            logger.debug(f"Failed to read \\r or \\n")
+            return False
+        return True
+
+    def print_body_from_request_with_content_length(self, response_dict):
+        request_dict = None
+        request_body_data = None
+        content_length = int(self.headers['Content-Length'])
+        request_body_data = self.rfile.read(content_length)
+        request_body = request_body_data.decode('utf-8')
+        if self.headers['Content-Type'] == 'application/json':
+            print("JSON body\n==============")
+            request_dict = json.loads(request_body)
+            response_dict['json-body'] = request_dict
+            if use_jq:
+                p = subprocess.Popen(['jq'], stdin=subprocess.PIPE, universal_newlines=True)
+                p.stdin.write(request_body)
+                p.stdin.close()
+                p.wait()
+            else:
+                print("\033[1;32m", end='')
+                pprint.pprint(request_dict)
+                print("\033[0m", end='')
+        elif self.headers['Content-Type'].startswith('multipart/form-data'):
+            response_dict['form-data'] = {}
+            print("Form data\n=========")
+            s = request_body.split("\r")[0][2:]
+            logger.debug(f"request_body = '{request_body}'")
+            logger.debug(f"s = '{s}'")
+            p = multipart.MultipartParser(io.BytesIO(multipart.to_bytes(request_body)),s)
+            for item in p.parts():
+                response_dict['form-data'][k] = v
+                print(f"\033[1;33mForm item: '{item.name}': '{item.value}'\033[0m")
+        else:
+            response_dict['request-body'] = request_body
+            print(f"\nRequest body\n============\n\033[1;33m{request_body}\033[0m")
+        return request_dict, request_body_data
 
     def print_headers(self, response_dict):
         header_dict = {}
