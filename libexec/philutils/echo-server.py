@@ -13,8 +13,6 @@ import subprocess
 import sys
 import urllib
 
-check_jq = subprocess.run(['which', 'jq'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-use_jq = (check_jq.returncode == 0)
 
 DESCRIPTION="Launch a server that prints out POST requests it receives"
 
@@ -32,8 +30,6 @@ def get_args():
     args = p.parse_args()
     if args.allowed_origins:
         args.allowed_origins = args.allowed_origins.split(",")
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
     if args.cert or args.key:
         if not (args.cert and args.key):
             p.error("Both or none of --cert and --key must be specified")
@@ -374,6 +370,19 @@ if args.curl_notes:
 """)
     sys.exit(0)
 
+if sys.stderr.isatty():
+    logging.addLevelName( logging.WARNING, f"\033[0;33m{logging.getLevelName(logging.WARNING)}\033[1;0m")
+    logging.addLevelName( logging.ERROR,   f"\033[0;31m{logging.getLevelName(logging.ERROR)}\033[1;0m")
+    logging.addLevelName( logging.INFO,    f"\033[0;35m{logging.getLevelName(logging.INFO)}\033[1;0m")
+    logging.addLevelName( logging.DEBUG,   f"\033[36m{logging.getLevelName(logging.DEBUG)}\033[1;0m")
+
+FORMAT = "[{levelname} - {funcName}()] {message}"
+logging.basicConfig(level=(logging.DEBUG if args.debug else logging.INFO), format=FORMAT, style='{')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
+
+check_jq = subprocess.run(['which', 'jq'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+use_jq = (check_jq.returncode == 0)
 
 server = http.server.HTTPServer((args.host, args.port), MyServer)
 
