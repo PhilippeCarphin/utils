@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+if [[ $(uname) != Darwin ]] ; then
+    echo "This is only for Darwin"
+    exit 1
+fi
+
+title=$1
+message=$2
+icon=$3
+set -x
+
+echo "shit"
+script="display alert \"${title}\" message \"${message}\""
+if (( $# == 3 )) ; then
+    script="display dialog \"${title}: ${message}\" with icon POSIX file \"${icon}\""
+fi
+osascript -e "${script}"
