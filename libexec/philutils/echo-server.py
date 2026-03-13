@@ -98,20 +98,21 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         self.print_query(query)
 
     def print_query(self, query):
-        if query:
-            self.response_dict['query'] = {}
-            print(f"Query Parameters\n================\033[35m")
-            query_parts = query.split('&')
-            for kv in query_parts:
-                try:
-                    k, v = kv.split("=")
-                    v = urllib.parse.unquote(v)
-                    print(f"\033[35m{k}: {v}\033[0m")
-                    self.response_dict['query'][k] = v
-                except ValueError as e:
-                    err = f"Query part '{kv}' does not contain equal sign"
-                    self.response_dict['warnings'].append(err)
-            print("\033[0m", end='')
+        if not query:
+            return
+        self.response_dict['query'] = {}
+        print(f"Query Parameters\n================\033[35m")
+        query_parts = query.split('&')
+        for kv in query_parts:
+            try:
+                k, v = kv.split("=")
+                v = urllib.parse.unquote(v)
+                print(f"\033[35m{k}: {v}\033[0m")
+                self.response_dict['query'][k] = v
+            except ValueError as e:
+                err = f"Query part '{kv}' does not contain equal sign"
+                self.response_dict['warnings'].append(err)
+        print("\033[0m", end='')
 
     def print_body(self):
         if 'Content-Length' in self.headers:
