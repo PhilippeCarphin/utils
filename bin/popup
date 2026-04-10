@@ -1,17 +1,41 @@
 #!/usr/bin/env bash
-if [[ $(uname) != Darwin ]] ; then
-    echo "This is only for Darwin"
-    exit 1
-fi
 
-title=$1
-message=$2
-icon=$3
-set -x
+main(){
+    case "$(uname)" in
+        Darwin) display-macos-popup "$@" ;;
+        Linux) display-tmux-popup "$@" ;;
+        *) echo "Uknown value for uname" >&2
+    esac
+}
 
-echo "shit"
-script="display alert \"${title}\" message \"${message}\""
-if (( $# == 3 )) ; then
-    script="display dialog \"${title}: ${message}\" with icon POSIX file \"${icon}\""
-fi
-osascript -e "${script}"
+display-tmux-popup(){
+    if [[ -z ${TMUX} ]] ; then
+        echo "Cannot display tmux popup when not in a TMUX session"
+    fi
+    title=$1
+    title_len=${#title}
+
+    tmux display-popup -E -w 80 -h 10 bash -c "
+        printf '\033[?25l'
+        printf '\033[47;30m%s\033[0m\n' '${1}'
+        printf '%s' '$2'
+        printf '\n'
+        read -p 'Press Enter to close'
+    "
+}
+
+display-macos-popup(){
+    title=$1
+    message=$2
+    icon=$3
+    set -x
+
+    echo "shit"
+    script="display alert \"${title}\" message \"${message}\""
+    if (( $# == 3 )) ; then
+        script="display dialog \"${title}: ${message}\" with icon POSIX file \"${icon}\""
+    fi
+    osascript -e "${script}"
+}
+
+main "$@"

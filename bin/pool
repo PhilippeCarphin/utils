@@ -9,17 +9,31 @@ import os
 import sys
 import logging
 
-DESCRIPTION = """ Use a process pool to complete tasks from a list """
+DESCRIPTION = """Use a process pool to complete tasks from a list with organized
+logging and statistics.
+
+If LOG_DIR is not specified, it defaults to $PWD/pool-<X>-log-dir where <X>
+is the basename of TASK_DIR or TASK_FILE.
+
+Start times and end times are logged to LOG_DIR/MainLog.txt during execution
+as well as compiled stats at the end:
+- List of failed tasks (non-zero exit status)
+- Longest, shortest, and average durations of failed tasks
+- Longest, shortest, and average durations of successful tasks
+
+The output of each task either goes to
+- LOG_DIR/line_${lineno}.log if tasks are lines from TASK_FILE
+- LOG_DIR/line_$(basename ${file}) if tasks are files from TASK_DIR"""
 
 def get_args():
-    p = argparse.ArgumentParser(description=DESCRIPTION)
-    p.add_argument('--nproc', '-j', type=int, default=4)
-    p.add_argument('--log-dir', help="Directory for log files (log everything to stderr if not defined)")
+    p = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=argparse.RawTextHelpFormatter)
+    p.add_argument('--nproc', '-j', type=int, default=4, help="Size of the process pool, the maximum number of tasks that will run in parallel")
+    p.add_argument('--log-dir', help="Directory for log files")
     p.add_argument('--debug', action='store_true')
 
     g = p.add_mutually_exclusive_group()
-    g.add_argument("--task-file")
-    g.add_argument("--task-dir")
+    g.add_argument("--task-file", help="Directory containing tasks as files, each file is run by `bash ${file}`")
+    g.add_argument("--task-dir", help="File containing tasks as individual lines.  Each line is run by `bash -c '${line}'`")
 
     args = p.parse_args()
 
