@@ -1,0 +1,74 @@
+#!/bin/bash
+if ! [[ -f $1 ]] ; then
+    printf "ERROR: Cannot tail '%s': No such file\n" "$1" >&2
+    exit 1
+fi
+
+shopt -s checkwinsize
+(:)
+
+exit_string=""
+trap 'printf "${exit_string}" >&2' EXIT
+
+# Switch to alternate buffer
+printf "\033[?1049h" >&2
+exit_string="\033[?1049l"
+
+# Print header
+print-wide-header(){
+    printf -v spaces "%$((COLUMNS-2))s" ''
+    equals=${spaces// /=}
+    header_text="Tailing $1"
+    # printf "+${h//?/=}+\n"
+    to_pad=$(( COLUMNS - 2 - ${#header_text} ))
+    padding=$((to_pad/2))
+    if (( to_pad % 2 == 0 )) ; then
+        extra_padding=0
+    else
+        extra_padding=1
+    fi
+    printf "+${equals}+\n"
+    printf "|%${padding}s\033[7m%s\033[27m%$((padding+extra_padding))s|\n" '' "$header_text" '' >&2
+    printf "+${equals}+"
+}
+print-narrow-header(){
+    header_text="Tailing $1"
+    equals=${header_text//?/=}
+    printf "+${equals}+\n"
+    printf "|\033[7m%s\033[27m|\n" "$header_text" >&2
+    printf "+${equals}+"
+}
+printf "\033[1;1H" >&2
+print-narrow-header "$1"
+
+# Set scroll region (\033[<start>;<end>r)
+printf "\033[4;$((LINES))r" >&2
+exit_string="\033[r${exit_string}"
+# ^^^^ Note resetting the scrollable region is not needed when using the
+# alternate buffer (unless we want to reset the region and keep using it)
+# in which case it would not be in the exit trap.
+
+# It looks like moving to the start of the scroll region needs to happen
+# *after* we set the scroll region
+printf "\033[4;1H" >&2
+
+# It may look like the last line of the screen is not part of the scrollable
+# region but this is because we're adding lines that end with a newline so
+# every time a line gets sent to the file we are tailing, we print that line
+# on the last line, but the trailing newline makes
+n=0
+number(){
+    while read line ; do
+        ((n++))
+        printf "\n%d: %s" "$n" "$line"
+    done
+}
+tail -n 1000 -f $1 # | number
+
+# Reset the scrollable region to the full screen
+# Only necess
+printf "\033[r"
+
+# Restore cursor position and show cursor
+printf "\033[u\033[?25h"
+

@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+
+import argparse
+from datetime import datetime
+DESCRIPTION=""" Estimate the duration and end time of a task of size N given its start time and how much of it is currently done:
+
+    progress = NB_DONE / TOTAL_NB
+    time_spent = 'now' - START_TIMESTAMP
+    time_per_unit = time_spent / NB_DONE
+    total_time = time_per_unit * TOTAL_NB
+    end_time = START_TIMESTAMP + total_time
+"""
+
+def get_args():
+    p = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=argparse.RawTextHelpFormatter)
+    p.add_argument('--start-timestamp', required=True, help="UNIX timestamp of start time")
+    p.add_argument('--total-nb', type=float)
+    p.add_argument('--nb-done', type=float)
+    p.add_argument('--progress')
+
+    return p.parse_args()
+
+args = get_args()
+start_time = datetime.fromtimestamp(int(args.start_timestamp))
+now = datetime.now()
+dt = now - start_time
+progress = args.nb_done/args.total_nb
+
+estimated_total_duration = dt / progress
+estimated_end_time = start_time + estimated_total_duration
+estimated_time_left = estimated_end_time - now
+
+print(f"{progress*100:0.2f}% done")
+print(f"                Started at {start_time}")
+print(f"      Estimated end time = {estimated_end_time}")
+print(f"     Estimated time left = {estimated_time_left}")
+print(f"Estimated total duration = {estimated_total_duration}")
+
+
+
