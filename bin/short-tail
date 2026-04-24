@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 SIZE=10
 main(){
-    LINES=$(tput lines)
-    cols=$(tput cols)
     space $SIZE
-    # get-cursor sometimes causes characters to be
-    # echoed when the get-cursor happens after C-c
+
     set-scroll
-    stty -echo
-    trap 'reset-scroll ; stty echo' EXIT
-    trap 'echo "^C" ; exit 130' INT
+    trap 'reset-scroll' EXIT
+
     tail -f $1 >&2
 }
 
@@ -17,7 +13,6 @@ get-cursor(){
     local pos
     printf "\033[6n" >&2
     read -u 0 -s -d R pos
-    # printf "%q\n" "${pos}"
     pos=${pos#*'['}
     row=${pos%;*}
     col=${pos#*;}
@@ -25,14 +20,11 @@ get-cursor(){
 
 set-scroll(){
     get-cursor
-    printf "\033[${row};$((row + SIZE))r" >&2
-    printf "\033[${row};${col}H" >&2
+    printf "\e7\e[${row};$((row+SIZE))r\e8" >&2
 }
 
 reset-scroll(){
-    get-cursor
-    printf "\033[1;$(tput lines)r" >&2
-    printf "\033[${row};${col}H" >&2
+    printf "\e7\e[r\e8" >&2
 }
 
 space(){
