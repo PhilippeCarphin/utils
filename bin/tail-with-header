@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 main(){
+    error-checks "$@" || return
+
     # Switch to alternate buffer
     printf "\033[?1049h" >&2
     trap 'kill ${TAIL_PID} ; wait ; printf "\033[?1049l" >&2' EXIT
@@ -34,6 +36,22 @@ prepare-display(){
     local x0=$(((cols - ${#header_text} )/ 2))
     printf "\033[2J\033[4;%dr\033[1;H%s\033[2;${x0}H%s\033[3;H%s\033[4;H" \
         "${LINES}" "${hrule}" "${header_text}" "${hrule}"
+
+error-checks(){
+    if (( $# < 1 )) ; then
+        printf "${0##*/}: ERROR: A file is required\n" >&2
+        return 1
+    fi
+
+    if ! [[ -f $1 ]] ; then
+        printf "${0##*/}: ERROR: Cannot tail '%s': No such file\n" "$1" >&2
+        return 1
+    fi
+
+    if (( $(tput lines) < 6 )) ; then
+        printf "${0##*/}: ERROR: Window too small\n" >&2
+        return 1
+    fi
 }
 
 main "$@"
