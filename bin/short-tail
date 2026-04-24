@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 SIZE=10
 main(){
+    error-checks "$@" || return
+
     space $SIZE
 
     set-scroll
@@ -31,6 +33,18 @@ space(){
     local spaces lines
     printf -v spaces "%${1}s"
     printf "%s\033[${1}A" "${spaces//?/$'\n'}" >&2
+}
+
+error-checks(){
+    if (( $# < 1 )) ; then
+        printf "${0##*/}: ERROR: A file is required\n" >&2
+        return 1
+    fi
+
+    if ! [[ -f $1 ]] ; then
+        printf "${0##*/}: ERROR: Cannot tail '%s': No such file\n" "$1" >&2
+        return 1
+    fi
 }
 
 main "$@"
