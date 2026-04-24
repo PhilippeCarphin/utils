@@ -11,15 +11,6 @@ main(){
     tail -f $1 >&2
 }
 
-get-cursor(){
-    local pos
-    printf "\033[6n" >&2
-    read -u 0 -s -d R pos
-    pos=${pos#*'['}
-    row=${pos%;*}
-    col=${pos#*;}
-}
-
 set-scroll(){
     get-cursor
     printf "\e7\e[${row};$((row+SIZE))r\e8" >&2
@@ -33,6 +24,14 @@ space(){
     local spaces lines
     printf -v spaces "%${1}s"
     printf "%s\033[${1}A" "${spaces//?/$'\n'}" >&2
+}
+
+get-cursor(){
+    printf "\033[6n" >&2
+    read -u 0 -s -d R pos
+    pos=${pos#*'['}
+    row=${pos%;*}
+    col=${pos#*;}
 }
 
 error-checks(){
