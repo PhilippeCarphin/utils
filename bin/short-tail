@@ -1,44 +1,26 @@
 #!/usr/bin/env bash
 SIZE=10
-main(){
-    error-checks "$@" || return
-    space $SIZE
-    set-scroll
-    trap 'reset-scroll' EXIT
-    tail -f $1 >&2
-}
 
-set-scroll(){
-    get-cursor
-    printf "\e7\e[${row};$((row+SIZE))r\e8" >&2
-}
+if (( $# < 1 )) ; then
+    printf "${0##*/}: ERROR: A file is required\n" >&2
+    exit 1
+elif ! [[ -f $1 ]] ; then
+    printf "${0##*/}: ERROR: Cannot tail '%s': No such file\n" "$1" >&2
+    exit 1
+fi
 
-reset-scroll(){
-    printf "\e7\e[r\e8" >&2
-}
+# Print $SIZE newlines
+printf -v spaces "%${SIZE}s"
+printf "%s\033[${SIZE}A" "${spaces//?/$'\n'}" >&2
 
-space(){
-    local spaces lines
-    printf -v spaces "%${1}s"
-    printf "%s\033[${1}A" "${spaces//?/$'\n'}" >&2
-}
+# Get cursor current row
+printf "\033[6n" >&2
+read -u 0 -s -d R pos
+pos=${pos#*'['}
+row=${pos%;*}
 
-get-cursor(){
-    printf "\033[6n" >&2
-    read -u 0 -s -d R pos
-    pos=${pos#*'['}
-    row=${pos%;*}
-    col=${pos#*;}
-}
+# Set scroll region and reset on exit
+printf "\e7\e[${row};$((row+SIZE))r\e8" >&2
+trap 'printf "\e7\e[r\e8" >&2' EXIT
 
-error-checks(){
-    if (( $# < 1 )) ; then
-        printf "${0##*/}: ERROR: A file is required\n" >&2
-        return 1
-    elif ! [[ -f $1 ]] ; then
-        printf "${0##*/}: ERROR: Cannot tail '%s': No such file\n" "$1" >&2
-        return 1
-    fi
-}
-
-main "$@"
+tail -f $1 >&2
