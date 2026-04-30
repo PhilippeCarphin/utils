@@ -45,26 +45,26 @@ declare -gA key_map=(
 )
 
 printf "Waiting for key presses ...\n"
-while read -s -N 1 b ; do
-    case "$b" in
+while read -s -N 1 byte ; do
+    case "$byte" in
         $'\003')
             read -p "C-c pressed: quit? y/n > " answer
             if [[ ${answer} == y* ]] ; then kill -INT $$ ; fi ;;
         $'\e')
-            read -r -s -t 0.1 -n 2 bing || true
-            printf "<<<%q>>>\n" "${bing}"
-            case "$bing" in
-                '[A') printf "up-arrow\n" ;;
-                '[B') printf "down-arrow\n" ;;
-                '[C') printf "right-arrow\n" ;;
-                '[D') printf "left-arrow\n" ;;
-                '') printf "escape-BING-BONG\n" ;;
+            read -r -s -t 0.1 -n 2 bytes_after_esc || true
+            case "$bytes_after_esc" in
+                '[A') printf "byte: %s (sent by pressing up-arrow)\n"    "\\E$bytes_after_esc" ;;
+                '[B') printf "byte: %s (sent by pressing down-arrow)\n"  "\\E$bytes_after_esc" ;;
+                '[C') printf "byte: %s (sent by pressing right-arrow)\n" "\\E$bytes_after_esc" ;;
+                '[D') printf "byte: %s (sent by pressing left-arrow)\n"  "\\E$bytes_after_esc" ;;
+                '') printf "byte: %s (sent by pressing ESC\n"            "\\E"      ;;
+                *) printf "byte: \\E$bytes_after_esc (sent by pressing 'ESC ${bytes_after_esc}' or 'ALT-$bytes_after_esc)\n" ;;
             esac
             ;;
-        *)  if [[ -n "${key_map[$b]:-}" ]] ; then
-                printf "byte:%q (sent by pressing ${key_map[$b]})\n" "$b"
+        *)  if [[ -n "${key_map[$byte]:-}" ]] ; then
+                printf "byte:%q (sent by pressing ${key_map[$byte]})\n" "$byte"
             else
-                printf "byte:%q\n" "$b"
+                printf "byte:%q\n" "$byte"
             fi
     esac
 done
