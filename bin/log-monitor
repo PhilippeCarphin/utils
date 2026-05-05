@@ -20,7 +20,10 @@ while true ; do
         if [[ -n ${2:-} ]] ; then
             sleep 5
         fi
-        ${tail} ${files[0]} &
+        # Note: Need to reopen dev/tty because the program is goin in
+        # background and without this, the `stty` in short-tail would
+        # fail with `stty: 'standard input': Inappropriate ioctl for device`
+        ${tail} ${files[0]} </dev/tty &
         tail_pid=$!
     fi
     sleep 5
