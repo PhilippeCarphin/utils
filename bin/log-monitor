@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+trap 'if [[ -n ${tail_pid} ]] ; then kill ${tail_pid} ; wait ; fi' EXIT
+case $1 in
+    -s) tail=short-tail ; shift ;;
+    -a) tail=tail-with-header ; shift ;;
+    *)  tail="tail -f" ;;
+esac
+glob=$1
+prev_nb_files=0
+while true ; do
+    files=($(command ls -t $glob))
+    nb_files=${#files[@]}
+    if (( nb_files > prev_nb_files )) ; then
+        prev_nb_files=${nb_files}
+        if [[ -n ${tail_pid:-} ]] ; then
+            kill ${tail_pid}
+            wait
+        fi
+        printf "\033[1;32mTailing new file ${files[0]}\033[0m\n"
+        if [[ -n ${2:-} ]] ; then
+            sleep 5
+        fi
+        ${tail} ${files[0]} &
+        tail_pid=$!
+    fi
+    sleep 5
+done
