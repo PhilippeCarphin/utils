@@ -31,15 +31,20 @@ def get_args():
     p.add_argument('--log-dir', help="Directory for log files")
     p.add_argument('--debug', action='store_true')
 
-    g = p.add_mutually_exclusive_group()
+    g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--task-file", help="Directory containing tasks as files, each file is run by `bash ${file}`")
     g.add_argument("--task-dir", help="File containing tasks as individual lines.  Each line is run by `bash -c '${line}'`")
 
     args = p.parse_args()
 
     if not args.log_dir:
-        suffix = os.path.basename(args.task_file if args.task_file else args.task_dir)
-        args.log_dir = f"pool-{suffix}-log-dir"
+        if args.task_file:
+            if args.task_file == '-':
+                args.log_dir = f"pool-stdin-log-dir"
+            else:
+                args.log_dir = f"pool-{os.path.basename(args.task_file)}-log-dir"
+        elif args.task_dir:
+                args.log_dir = f"pool-{os.path.basename(args.task_dir)}-log-dir"
 
     return args
 
@@ -48,6 +53,10 @@ args = get_args()
 main_log = f"{args.log_dir}/MainLog.txt"
 
 def main():
+    if os.path.isdir(args.log_dir):
+        logging.error(f"Log directory '{args.log_dir}' already exists")
+        return 1
+
     os.makedirs(args.log_dir, exist_ok=True)
     tasks = generate_tasks(args)
     with open(main_log, 'a') as f:
@@ -93,7 +102,7 @@ class Task:
             self._run(file=log)
             log.write(f"end at {self.end}\n")
             log.write(f"DURATION: {self.duration}\n")
-        self.write_main_log(f"Job {self} ended at {self.end} with returncode {self.returncode} (took {self.duration})\n")
+        self.write_main_log(f"Job {self} ended at {self.end} with returncode {self.returncode} (log_file={os.path.basename(self.log_path)}) (took {self.duration})\n")
         return self
 
     def _run(self, file):
