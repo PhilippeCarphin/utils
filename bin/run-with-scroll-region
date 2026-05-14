@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+file=$1
+SIZE=10
+readarray -t lines <${file}
+for line in "${lines[@]}" ; do
+    printf "\033[1;32m${line}\033[0m\n"
+
+    # Print $SIZE newlines
+    printf -v spaces "%${SIZE}s"
+    printf "%s\033[${SIZE}A" "${spaces//?/$'\n'}" >&2
+
+    # Get cursor current row
+    printf "\033[6n" >&2
+    read -s -d R pos
+    pos=${pos#*'['}
+    row=${pos%;*}
+
+    # Set scroll region and reset on exit
+    printf "\e7\e[${row};$((row+SIZE))r\e8" >&2
+    trap 'printf "\e7\e[r\e8" >&2 ; stty echo 2>/dev/null' EXIT
+
+    ${line}
+    status=$?
+    printf "\e7\e[r\e8" >&2
+    printf "... exit code:"
+    case $status in
+        0) printf "\e[32m" ;;
+        *) printf "\e[31m" ;;
+    esac
+    printf "${status}\e[0m\n"
+done
