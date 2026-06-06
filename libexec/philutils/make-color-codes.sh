@@ -20,6 +20,11 @@ main(){
     echo "============= 6x6x6 cube"
     print-cube
 
+    if (( $# >= 1 )) ; then
+        echo "============= Extra faces"
+        print-extra-ways
+    fi
+
     echo "============= Grayscale values"
     rectangle 232 4 6
 
@@ -35,6 +40,24 @@ map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
 # [16, 52, 88, 124, 160, 196]
 # map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
 pow_6=(36 6 1)
+
+print-extra-ways(){
+    printf " ----- RG face with B=0\n"
+    print_face rg 0
+    printf " ----- RG face with B=5\n"
+    print_face rg 5
+    printf " ----- RG face with R=0\n"
+    print_face gb 0
+    printf " ----- GB face with R=5\n"
+    print_face gb 5
+    printf " ----- BR cube\n"
+    print_x_cube br
+    printf " ----- RG cube\n"
+    print_x_cube rg
+    printf " ----- BG cube\n"
+    print_x_cube bg
+}
+
 print_face(){
     local pow_i pow_j pow_fix
     case $1 in
@@ -53,17 +76,33 @@ print_face(){
         printf "\n"
     done
 }
+#
+# Print as a cube of XY faces
+#  ______ ______ ______ ______ ______ ______
+# |+-i-->|      |      |      |      |      |
+# ||     |      |      |      |      |      |
+# |j     |      |      |      |      |      |
+# ||     |      |      |      |      |      |
+# |v_____|______|______|______|______|______|
+# |
+# |---------------- k (faces) -------------->
+#
 print_x_cube(){
     local pow_i pow_j pow_k
+    local red=0 green=1 blue=2
     case $1 in
-        rg) pow_i=0;   pow_j=1;    pow_k=2 ;;
-        rb) pow_i=0;   pow_k=1 ;   pow_j=2 ;;
-        gr) pow_i=1;   pow_j=0;    pow_k=2 ;;
-        gb) pow_k=0;   pow_i=1;    pow_j=2 ;;
-        br) pow_i=2;   pow_k=1 ;   pow_j=0 ;;
-        bg) pow_k=0;   pow_i=2;    pow_j=1 ;;
+        rg) pow_i=$red  ;   pow_j=$green ;    pow_k=$blue  ;;
+        rb) pow_i=$red  ;   pow_k=$green ;    pow_j=$blue  ;;
+        gr) pow_i=$green;   pow_j=$red   ;    pow_k=$blue  ;;
+        gb) pow_k=$red  ;   pow_i=$green ;    pow_j=$blue  ;;
+        br) pow_i=$blue ;   pow_k=$green ;    pow_j=$red   ;;
+        bg) pow_k=$red  ;   pow_i=$blue  ;    pow_j=$green ;;
     esac
+    local values=(00 5f 87 af d7 ff)
+    # printf "     %s\n" "${1:0:1}"
+    # printf "%-3s |00  5f  87  af  d7  ff |\n"
     for j in {0..5} ; do
+        # printf " %s " "${values[j]}"
         for k in {0..5} ; do
             for i in {0..5} ; do
                 print_code $((16 + i*pow_6[pow_i] + j*pow_6[pow_j] + k*pow_6[pow_k]))
@@ -71,6 +110,7 @@ print_x_cube(){
         done
         printf "\n"
    done
+   # echo '    \__________00 _________/\__________5f__________/\__________87__________/\__________af__________/\__________d7__________/\__________ff__________/'
 }
 ################################################################################
 # Prints the color cube
@@ -96,14 +136,6 @@ red|00  5f  87  af  d7  ff |"
     echo '    \______________________/\______________________/\______________________/\______________________/\______________________/\______________________/
 green         00                      5f                      87                      af                      d7                      ff
 '
-
-print_face rg 0
-print_face rg 5
-print_face gb 0
-print_face gb 5
-print_x_cube br
-print_x_cube rg
-print_x_cube bg
 }
 
 ################################################################################
@@ -219,4 +251,4 @@ list() {
     done
 }
 
-main
+main "$@"
