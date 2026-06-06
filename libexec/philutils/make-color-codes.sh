@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ################################################################################
 # Main function called at end of this script
@@ -14,10 +14,16 @@ main(){
     printf "\033[4mBright Basic Background\033[0m\n"
     list 100 107
 
-    echo "============= 8 bit color : \033[48;5;<n>m ======================="
-    echo "The same color can be set for the foreground using \033[38;5;<n>m"
+    echo "============= 8 bit color : \033[48;5;<n>m \033[38;5;<n>m ==========="
+    echo "48 is background, 38 is foreground"
+    echo "============= [0,15] Basic 16 colors"
+    echo "Same as \033[<30-37>m for foreground and \033[<40-47>m for background"
+    row 0 8  # +1 because row does ${1} <= x < ${2}
+    echo "Same as \033[<90-97>m for foreground and \033[<100-107>m for background"
+    row 8 16
 
-    echo "============= 6x6x6 cube"
+
+    echo "============= [16,231] 6x6x6 cube"
     print-cube
 
     if (( $# >= 1 )) ; then
@@ -25,22 +31,12 @@ main(){
         print-extra-ways
     fi
 
-    echo "============= Grayscale values"
+    echo "============= [232,255] Grayscale values"
     rectangle 232 4 6
-
-    echo "============= Basic 16 colors"
-    echo "Same as \033[<30-37>m for foreground and \033[<40-47>m for background"
-    row 0 8  # +1 because row does ${1} <= x < ${2}
-    echo "Same as \033[<90-97>m for foreground and \033[<100-107>m for background"
-    row 8 16
 
 }
 map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
-# [16, 22, 28, 34, 40, 46]
-# [16, 52, 88, 124, 160, 196]
-# map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
-pow_6=(36 6 1)
-
+declare -A pow_6=([red]=36 [green]=6 [blue]=1)
 print-extra-ways(){
     printf " ----- RG face with B=0\n"
     print_face rg 0
@@ -61,17 +57,17 @@ print-extra-ways(){
 print_face(){
     local pow_i pow_j pow_fix
     case $1 in
-        rg) pow_i=0;   pow_j=1;    pow_k=2 ;;
-        rb) pow_i=0;   pow_k=1 ;   pow_j=2 ;;
-        gr) pow_i=1;   pow_j=0;    pow_k=2 ;;
-        gb) pow_k=0;   pow_i=1;    pow_j=2 ;;
-        br) pow_i=2;   pow_k=1 ;   pow_j=0 ;;
-        bg) pow_k=0;   pow_i=2;    pow_j=1 ;;
+        rg) pow_i=red  ;   pow_j=green;    pow_k=blue  ;;
+        rb) pow_i=red  ;   pow_k=green ;   pow_j=blue  ;;
+        gr) pow_i=green;   pow_j=red  ;    pow_k=blue  ;;
+        gb) pow_k=red  ;   pow_i=green;    pow_j=blue  ;;
+        br) pow_i=blue ;   pow_k=green ;   pow_j=red   ;;
+        bg) pow_k=red  ;   pow_i=blue ;    pow_j=green ;;
     esac
     local k=$2
     for j in {0..5} ; do
         for i in {0..5} ; do
-                print_code $((16 + i*pow_6[pow_i] + j*pow_6[pow_j] + k*pow_6[pow_k]))
+                print_code $((16 + i*pow_6[$pow_i] + j*pow_6[$pow_j] + k*pow_6[$pow_k]))
         done
         printf "\n"
     done
@@ -89,14 +85,13 @@ print_face(){
 #
 print_x_cube(){
     local pow_i pow_j pow_k
-    local red=0 green=1 blue=2
     case $1 in
-        rg) pow_i=$red  ;   pow_j=$green ;    pow_k=$blue  ;;
-        rb) pow_i=$red  ;   pow_k=$green ;    pow_j=$blue  ;;
-        gr) pow_i=$green;   pow_j=$red   ;    pow_k=$blue  ;;
-        gb) pow_k=$red  ;   pow_i=$green ;    pow_j=$blue  ;;
-        br) pow_i=$blue ;   pow_k=$green ;    pow_j=$red   ;;
-        bg) pow_k=$red  ;   pow_i=$blue  ;    pow_j=$green ;;
+        rg) pow_i=red  ;   pow_j=green ;    pow_k=blue  ;;
+        rb) pow_i=red  ;   pow_k=green ;    pow_j=blue  ;;
+        gr) pow_i=green;   pow_j=red   ;    pow_k=blue  ;;
+        gb) pow_k=red  ;   pow_i=green ;    pow_j=blue  ;;
+        br) pow_i=blue ;   pow_k=green ;    pow_j=red   ;;
+        bg) pow_k=red  ;   pow_i=blue  ;    pow_j=green ;;
     esac
     local values=(00 5f 87 af d7 ff)
     # printf "     %s\n" "${1:0:1}"
@@ -105,7 +100,7 @@ print_x_cube(){
         # printf " %s " "${values[j]}"
         for k in {0..5} ; do
             for i in {0..5} ; do
-                print_code $((16 + i*pow_6[pow_i] + j*pow_6[pow_j] + k*pow_6[pow_k]))
+                print_code $((16 + i*pow_6[$pow_i] + j*pow_6[$pow_j] + k*pow_6[$pow_k]))
             done
         done
         printf "\n"
@@ -116,17 +111,16 @@ print_x_cube(){
 # Prints the color cube
 ################################################################################
 print-cube() {
-    echo "Printing each code as 'printf \"\033[48;5;\${code}m\${zero_padded_code}\033[0m\"\'
-with code in [16,231] = 16 + (36r + 6g + b) with r,g,b in [0,5].  Note that the RGB values
-0x00(0), 0x5f(95), 0x87(135), 0xaf(175), 0xd7(215), 0xff(255) are not evenly spaced.
-The jumps are 95, 40, 40, 40, 40."
+#     echo "Printing each code as 'printf \"\033[48;5;\${code}m\${zero_padded_code}\033[0m\"\'
+# with code in [16,231] = 16 + (36r + 6g + b) with r,g,b in [0,5].  Note that the RGB values
+# 0x00(0), 0x5f(95), 0x87(135), 0xaf(175), 0xd7(215), 0xff(255) are not evenly spaced.
+# The jumps are 95, 40, 40, 40, 40."
 # Maybe https://www.ditig.com/256-colors-cheat-sheet
 # http://www.calmar.ws/vim/256-xterm-24bit-rgb-color-chart.html
 # code-16 % 36 is the left-right index
 # code-16 / 36 is the vertical index
 # (code-16) % 6 is the inner horizontal index
-echo "
-           blue
+echo "           blue
 red|00  5f  87  af  d7  ff |"
     for ul in 16 52 88 124 160 196 ; do
         case $ul in 16) red=00 ;; 52) red=5f;; 88)red=87;; 124)red=af;; 160)red=d7;; 196)red=ff;; esac
@@ -134,8 +128,7 @@ red|00  5f  87  af  d7  ff |"
         row $ul $(($ul + 36))
     done
     echo '    \______________________/\______________________/\______________________/\______________________/\______________________/\______________________/
-green         00                      5f                      87                      af                      d7                      ff
-'
+green         00                      5f                      87                      af                      d7                      ff'
 }
 
 ################################################################################
