@@ -30,6 +30,48 @@ main(){
     row 8 16
 
 }
+map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
+# [16, 22, 28, 34, 40, 46]
+# [16, 52, 88, 124, 160, 196]
+# map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
+pow_6=(36 6 1)
+print_face(){
+    local pow_i pow_j pow_fix
+    case $1 in
+        rg) pow_i=0;   pow_j=1;    pow_k=2 ;;
+        rb) pow_i=0;   pow_k=1 ;   pow_j=2 ;;
+        gr) pow_i=1;   pow_j=0;    pow_k=2 ;;
+        gb) pow_k=0;   pow_i=1;    pow_j=2 ;;
+        br) pow_i=2;   pow_k=1 ;   pow_j=0 ;;
+        bg) pow_k=0;   pow_i=2;    pow_j=1 ;;
+    esac
+    local k=$2
+    for j in {0..5} ; do
+        for i in {0..5} ; do
+                print_code $((16 + i*pow_6[pow_i] + j*pow_6[pow_j] + k*pow_6[pow_k]))
+        done
+        printf "\n"
+    done
+}
+print_x_cube(){
+    local pow_i pow_j pow_k
+    case $1 in
+        rg) pow_i=0;   pow_j=1;    pow_k=2 ;;
+        rb) pow_i=0;   pow_k=1 ;   pow_j=2 ;;
+        gr) pow_i=1;   pow_j=0;    pow_k=2 ;;
+        gb) pow_k=0;   pow_i=1;    pow_j=2 ;;
+        br) pow_i=2;   pow_k=1 ;   pow_j=0 ;;
+        bg) pow_k=0;   pow_i=2;    pow_j=1 ;;
+    esac
+    for j in {0..5} ; do
+        for k in {0..5} ; do
+            for i in {0..5} ; do
+                print_code $((16 + i*pow_6[pow_i] + j*pow_6[pow_j] + k*pow_6[pow_k]))
+            done
+        done
+        printf "\n"
+   done
+}
 ################################################################################
 # Prints the color cube
 ################################################################################
@@ -43,18 +85,25 @@ The jumps are 95, 40, 40, 40, 40."
 # code-16 % 36 is the left-right index
 # code-16 / 36 is the vertical index
 # (code-16) % 6 is the inner horizontal index
-
 echo "
            blue
-red|00 5f 87 af d7 ff|"
+red|00  5f  87  af  d7  ff |"
     for ul in 16 52 88 124 160 196 ; do
         case $ul in 16) red=00 ;; 52) red=5f;; 88)red=87;; 124)red=af;; 160)red=d7;; 196)red=ff;; esac
         echo -n  "$red :"
         row $ul $(($ul + 36))
     done
-    echo '    \________________/\________________/\________________/\________________/\________________/\________________/
-green       00                5f                87                af                d7                ff
+    echo '    \______________________/\______________________/\______________________/\______________________/\______________________/\______________________/
+green         00                      5f                      87                      af                      d7                      ff
 '
+
+print_face rg 0
+print_face rg 5
+print_face gb 0
+print_face gb 5
+print_x_cube br
+print_x_cube rg
+print_x_cube bg
 }
 
 ################################################################################
@@ -73,38 +122,44 @@ zero-pad-to-3-digits () {
 
 print_code(){
     local code=$1
-    if (( code <= 255 )) && (( 232 <= code)) ; then
-        if (( 248 <= code )) && (( code <= 255 )) ; then
+    if (( 232 <= code)) && (( code <= 255 )) ; then
+        if (( 248 <= code )) ; then
             fg=$'\033[38;5;0m'
         else
             fg=$'\033[38;5;15m'
         fi
-        printf "\033[48;5;${code}m${fg}$(zero-pad-to-3-digits ${code} )\033[0m"
-        # printf "\033[48;5;${code}m${fg}   \033[0m"
     else
         if (( 24 <= ((code - 16) % 36) )) ; then
             fg=$'\033[38;5;0m'
         else
             fg=$'\033[38;5;15m'
         fi
-        if [[ -n ${grayscale} ]] ; then
-            # Testing ANSI colorcube to ANSI grayscale [232,255]
-            gcode=$(ansi_to_grayscale ${code})
-            printf "\033[48;5;${gcode}m${fg}   \033[0m"
-        else
-            printf "\033[48;5;${code}m${fg}$(zero-pad-to-3-digits ${code} )\033[0m"
-        fi
-
     fi
+
+    if [[ -n ${grayscale} ]] ; then
+        # Testing ANSI colorcube to ANSI grayscale [232,255]
+        gcode=$(ansi_to_grayscale ${code})
+        printf "\033[48;5;${gcode}m${fg}    \033[0m"
+    else
+        printf "\033[48;5;${code}m${fg} $(zero-pad-to-3-digits ${code} )\033[0m"
+    fi
+
 }
 
-map=(0 95 135 175 215 255)
+map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
+
 # Code from [16,231] (code is 16 + 36r + 6g + b where r,g,b in [0,5])
 # And [0,5] --map--> [0,255]
 # [0,255]x[0,255]x[0,255] ---> [0,255] with 0.3*R + 0.59*G + 0.11*B
 # [0,255] ---> [232,255] (range of grayscale ansi codes)
+# ansi in [16,230]
 ansi_to_grayscale(){
     local ansi=$1
+    if ((ansi > 232)) ; then
+        echo $ansi
+        return
+    fi
+
     if (( ansi < 16 )) ||((ansi > 231)) ; then
         return 1
     fi
