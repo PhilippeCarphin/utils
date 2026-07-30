@@ -212,9 +212,9 @@ class MyServer(http.server.BaseHTTPRequestHandler):
                     if isinstance(header_dict[k], list):
                         header_dict[k].append(v)
                     else:
-                        heacer_dict[k] = [header_dict[k], v]
+                        header_dict[k] = [header_dict[k], v]
                 else:
-                    header_dict[k] = [v]
+                    header_dict[k] = v
         self.response_dict['Headers'] = header_dict
 
 
