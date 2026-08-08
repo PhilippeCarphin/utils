@@ -1,0 +1,140 @@
+#!/usr/bin/env -S bash +o posix
+
+#
+# Lifted from /usr/share/bash-completion/completions/make
+# Function `_make` stripped and adapted to return 0 or 1 instead of outputting
+# the list of targets.
+#
+main(){
+    local -a args=("$@")
+    export LC_ALL=C
+
+    local -a dash_C_args
+    for (( i=0; i < ${#args[@]}-1; i++ )); do
+        if [[ ${args[i]} == -@(C|-directory) ]]; then
+            dash_C_args=( -C "${args[i+1]}" )
+            unset args[i] args[i+1]
+        fi
+    done
+
+    local -a dash_f_args
+    for (( i=0; i < ${#args[@]}-1; i++ )); do
+        if [[ ${args[i]} == -@(f|-?(make)file) ]]; then
+            dash_f_args=( -f "${args[i+1]}" )
+            unset args[i] args[i+1]
+        fi
+    done
+
+    make_cmd=(make -npq __BASH_MAKE_COMPLETION__=1 "${dash_f_args[@]}" "${dash_C_args[@]}" .DEFAULT)
+    if (( ${#args[@]} < 1 )) ; then
+        "${make_cmd[@]}" 2>/dev/null \
+            | command sed -nf <(_make_target_extract_script "") \
+            | sort \
+            | uniq
+    else
+        targets=($("${make_cmd[@]}" 2>/dev/null | command sed -nf <(_make_target_extract_script -- "${target}")))
+        for t in "${args[@]}" ; do
+            if ! _array_contains targets ${t} ; then
+                return 1
+            fi
+        done
+        return 0
+    fi
+}
+
+_array_contains(){
+    local -n _array=$1
+    local element=$2
+    for e in "${_array[@]}" ; do
+        if [[ ${e} == ${element} ]] ; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+#
+# Lifted exactly from /usr/share/bash-completion/completions/make
+#
+_make_target_extract_script()
+{
+    local mode="$1"
+    shift
+
+    local prefix="$1"
+    local prefix_pat=$(command sed 's/[][\,.*^$(){}?+|/]/\\&/g' <<<"$prefix")
+    local basename=${prefix##*/}
+    local dirname_len=$((${#prefix} - ${#basename}))
+
+    if [[ $mode == -d ]]; then
+        # display mode, only output current path component to the next slash
+        local output="\2"
+    else
+        # completion mode, output full path to the next slash
+        local output="\1\2"
+    fi
+
+    cat <<EOF
+    1,/^# * Make data base/           d;        # skip any makefile output
+    /^# * Finished Make data base/,/^# * Make data base/{
+                                      d;        # skip any makefile output
+    }
+    /^# * Variables/,/^# * Files/     d;        # skip until files section
+    /^# * Not a target/,/^$/          d;        # skip not target blocks
+    /^${prefix_pat}/,/^$/!            d;        # skip anything user dont want
+
+    # The stuff above here describes lines that are not
+    #  explicit targets or not targets other than special ones
+    # The stuff below here decides whether an explicit target
+    #  should be output.
+
+    /^# * File is an intermediate prerequisite/ {
+      s/^.*$//;x;                               # unhold target
+      d;                                        # delete line
+    }
+
+    /^$/ {                                      # end of target block
+      x;                                        # unhold target
+      /^$/d;                                    # dont print blanks
+      s|^\(.\{${dirname_len}\}\)\(.\{${#basename}\}[^:/]*/\{0,1\}\)[^:]*:.*$|${output}|p;
+      d;                                        # hide any bugs
+    }
+
+    # This pattern includes a literal tab character as \t is not a portable
+    # representation and fails with BSD sed
+    /^[^#	:%]\{1,\}:/ {         # found target block
+      /^\.PHONY:/                 d;            # special target
+      /^\.SUFFIXES:/              d;            # special target
+      /^\.DEFAULT:/               d;            # special target
+      /^\.PRECIOUS:/              d;            # special target
+      /^\.INTERMEDIATE:/          d;            # special target
+      /^\.SECONDARY:/             d;            # special target
+      /^\.SECONDEXPANSION:/       d;            # special target
+      /^\.DELETE_ON_ERROR:/       d;            # special target
+      /^\.IGNORE:/                d;            # special target
+      /^\.LOW_RESOLUTION_TIME:/   d;            # special target
+      /^\.SILENT:/                d;            # special target
+      /^\.EXPORT_ALL_VARIABLES:/  d;            # special target
+      /^\.NOTPARALLEL:/           d;            # special target
+      /^\.ONESHELL:/              d;            # special target
+      /^\.POSIX:/                 d;            # special target
+      /^\.NOEXPORT:/              d;            # special target
+      /^\.MAKE:/                  d;            # special target
+EOF
+
+    # don't complete with hidden targets unless we are doing a partial completion
+    if [[ -z ${prefix_pat} || ${prefix_pat} == */ ]]; then
+        cat <<EOF
+      /^${prefix_pat}[^a-zA-Z0-9]/d;            # convention for hidden tgt
+EOF
+    fi
+
+    cat <<EOF
+      h;                                        # hold target
+      d;                                        # delete line
+    }
+
+EOF
+}
+
+main "$@"
