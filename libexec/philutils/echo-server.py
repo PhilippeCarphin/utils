@@ -74,7 +74,10 @@ class MyServer(http.server.BaseHTTPRequestHandler):
         self.response_headers['Content-Length'] = len(body)
         if self.response_headers:
             for k,v in self.response_headers.items():
+                if k in ['Connection']:
+                    continue
                 self.send_header(k,v)
+        self.send_header('Connection', 'close')
         self.end_headers()
         self.wfile.write(body)
 
@@ -366,7 +369,6 @@ class MyServer(http.server.BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.generic_handler("OPTIONS")
     def do_PATCH(self):
-        print("PATCH BINGBONG")
         self.generic_handler("PATCH")
 
 def print_with_jq(request_body):
