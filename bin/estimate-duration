@@ -2,6 +2,8 @@
 
 import argparse
 from datetime import datetime
+import sys
+
 DESCRIPTION=""" Estimate the duration and end time of a task of size N given its start time and how much of it is currently done:
 
     progress = NB_DONE / TOTAL_NB
@@ -13,28 +15,61 @@ DESCRIPTION=""" Estimate the duration and end time of a task of size N given its
 
 def get_args():
     p = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=argparse.RawTextHelpFormatter)
-    p.add_argument('--start-timestamp', required=True, help="UNIX timestamp of start time")
+    progress = p.add_mutually_exclusive_group()
+    progress.add_argument('--nb-done', type=float)
+    progress.add_argument('--progress', type=float, help="Specify progress in percentage instead of NB_DONE and TOTAL_NB")
+
     p.add_argument('--total-nb', type=float)
-    p.add_argument('--nb-done', type=float)
-    p.add_argument('--progress')
+    p.add_argument('--start-timestamp', required=True, help="UNIX timestamp of start time")
 
-    return p.parse_args()
+    args = p.parse_args()
 
-args = get_args()
-start_time = datetime.fromtimestamp(int(args.start_timestamp))
-now = datetime.now()
-dt = now - start_time
-progress = args.nb_done/args.total_nb
+    if args.nb_done and not args.total_nb:
+        p.error("If progress is indicated by --nb-done, then --total-nb must also be provided")
 
-estimated_total_duration = dt / progress
-estimated_end_time = start_time + estimated_total_duration
-estimated_time_left = estimated_end_time - now
+    return args
 
-print(f"{progress*100:0.2f}% done")
-print(f"                Started at {start_time}")
-print(f"      Estimated end time = {estimated_end_time}")
-print(f"     Estimated time left = {estimated_time_left}")
-print(f"Estimated total duration = {estimated_total_duration}")
+def main():
+    args = get_args()
+    start_time = datetime.fromtimestamp(int(args.start_timestamp))
+    now = datetime.now()
+    dt = now - start_time
+
+    if args.progress:
+        progress = args.progress / 100
+        if args.total_nb:
+            nb_done = progress * args.total_nb
+    else:
+        progress = args.nb_done/args.total_nb
+
+    estimated_total_duration = dt / progress
+    estimated_end_time = start_time + estimated_total_duration
+    estimated_time_left = estimated_end_time - now
+
+    print(f"{progress*100:0.2f}% done")
+    print(f"                Started at {start_time}")
+
+    if args.nb_done:
+        print(f"   Average time per item = {format_dt(dt/args.nb_done)}")
+
+    print(f"      Estimated end time = {estimated_end_time.strftime('%Y-%m-%d %H:%M')}")
+    print(f"     Estimated time left = {format_dt(estimated_time_left)}")
+    print(f"Estimated total duration = {format_dt(estimated_total_duration)}")
 
 
+def format_dt(dt):
+    seconds = int(dt.total_seconds())
+    minutes = seconds // 60
+    hours = minutes // 60
+    s = seconds % 60
+    m = minutes % 60
+    h = hours % 24
+    if hours >= 24:
+        d = hours // 24
+        return f"{d} days, {h:02}:{m:02}:{s:02}"
 
+    return f"{h:02}:{m:02}:{s:02}"
+
+
+if __name__ == "__main__":
+    sys.exit(main())
