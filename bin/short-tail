@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 SIZE=10
 
+# TODO: When this is running in foreground in a shell and I C-c it,
+# the tail process stops as well.
+#
+# However when I stop it by going in another shell and doing `kill THISPID`
+# the tail process stays alive and keeps going.
+#
+# So I think I either have to kill it with another signal or do the thing
+# where I send it in background, wait for it, and set a trap to propagate
+# the signale.
+
 if (( $# < 1 )) ; then
     printf "${0##*/}: ERROR: A file is required\n" >&2
     exit 1
