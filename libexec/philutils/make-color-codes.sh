@@ -1,9 +1,69 @@
 #!/usr/bin/env bash
+#
+map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
+declare -A pow_6=([red]=36 [green]=6 [blue]=1)
 
+usage(){
+    printf "USAGE:\n\n\t${0##*/} [-c CODE1 CODE2 | -l R1 G1 B1 R2 G2 B2 | -a]
+
+    -c CODE1 CODE2: Print a line on the cube from CODE1 to CODE2
+    -l R1 G1 B1 R2 G2 B2: Print a line on the cube from (R1,G1,B1) to (R2,G2,B2)
+                          with Ri Gi Bi in [0,5]
+    -a: Print extra faces and cube organized in various ways
+    -x CODE: Display code as hex RGB values\n"
+}
 ################################################################################
 # Main function called at end of this script
 ################################################################################
 main(){
+    local OPTIND OPTARG opt
+    local line_codes=false
+    local line_rgb=false
+    local all=false
+    local code_to_hex=false
+    local code_to_cube=false
+    local code=
+    while getopts "hclx:u:a" opt ; do
+        case ${opt} in
+            c) line_codes=true ;;
+            l) line_rgb=true ;;
+            a) all=true ;;
+            x) code_to_hex=true ; code=${OPTARG#0} ;;
+            u) code_to_cube=true ; code=${OPTARG#0} ;;
+            h) usage ; return 0 ;;
+            '?') usage ; return 1;;
+        esac
+    done
+    shift $((OPTIND-1))
+
+    if ${code_to_cube} ; then
+        display-code-rgb ${code}
+        return
+    fi
+
+    if ${code_to_hex} ; then
+        display-code-hex-rgb ${code}
+        return
+    fi
+
+    if ${line_rgb} ; then
+        if (( $# < 6 )) ; then
+            printf "ERROR: With -l 6 arguments must be given: $0 -l R1 G1 B1 R2 G2 B2"
+            return 1
+        fi
+        display-line-rgb "$@"
+        return
+    fi
+
+    if ${line_codes} ; then
+        if (( $# < 2 )) ; then
+            printf "ERROR: With -c 2 arguments must be given: $0 -c CODE1 CODE2"
+            return 1
+        fi
+        display-line-code "$@"
+        return
+    fi
+
     echo "============= Basic colors : \033[<n>m ======================="
     printf "\033[4mBasic Foreground\033[0m\n"
     list 30 37
@@ -26,7 +86,7 @@ main(){
     echo "============= [16,231] 6x6x6 cube"
     print-cube
 
-    if (( $# >= 1 )) ; then
+    if ${all} ; then
         echo "============= Extra faces"
         print-extra-ways
     fi
@@ -35,8 +95,6 @@ main(){
     rectangle 232 4 6
 
 }
-map=(0 95 135 175 215 255) # [0,5] |--> [0,255]
-declare -A pow_6=([red]=36 [green]=6 [blue]=1)
 print-extra-ways(){
     printf " ----- RG face with B=0\n"
     print_face rg 0
@@ -145,6 +203,24 @@ zero-pad-to-3-digits () {
     fi
 }
 
+select-fg(){
+    local code=$1
+    if (( 232 <= code)) && (( code <= 255 )) ; then
+        if (( 248 <= code )) ; then
+            echo $'\033[38;5;0m'
+        else
+            echo $'\033[38;5;15m'
+        fi
+    else
+        if (( 24 <= ((code - 16) % 36) )) ; then
+            echo $'\033[38;5;0m'
+        else
+            echo $'\033[38;5;15m'
+        fi
+    fi
+}
+
+
 print_code(){
     local code=$1
     if (( 232 <= code)) && (( code <= 255 )) ; then
@@ -166,8 +242,9 @@ print_code(){
         gcode=$(ansi_to_grayscale ${code})
         printf "\033[48;5;${gcode}m${fg}    \033[0m"
     else
-        printf "\033[48;5;${code}m${fg} $(zero-pad-to-3-digits ${code} )\033[0m"
+        printf "\033[48;5;%dm${fg} %03d\033[0m" "${code}" "${code}"
     fi
+
 
 }
 
@@ -243,5 +320,86 @@ list() {
         # echo ""
     done
 }
+
+display-rgb-code(){
+    r=$1
+    g=$2
+    b=$3
+
+    code=$(rgb-to-code $r $g $b)
+    # printf "\033[38;5;%dm%03d\033[0m\n" "${code}" "${code}"
+    # printf "\033[1;37;48;5;%dm %03d\033[0m" "${code}" "${code}"
+    print_code "${code}"
+}
+
+display-code-rgb(){
+    local code=$1
+    local rgb=($(code-to-rgb ${code}))
+    local fg="$(select-fg ${code})"
+    printf "${fg}\033[48;5;${code}m%d,%d,%d\033[0m\n" "${rgb[0]}" "${rgb[1]}" "${rgb[2]}"
+}
+
+display-code-hex-rgb(){
+    local code=$1
+    display-rgb-hex $(code-to-rgb ${code})
+}
+
+display-rgb-hex(){
+    r=$1
+    g=$2
+    b=$3
+
+    code=$(rgb-to-code $r $g $b)
+    local fg=$(select-fg ${code})
+    printf "${fg}\033[48;5;${code}m0x%02x%02x%02x\033[0m\n" "${map[r]}" "${map[g]}" "${map[b]}"
+}
+
+display-line-rgb(){
+    local r1=$1 g1=$2 b1=$3
+    local r2=$4 g2=$5 b2=$6
+
+    for ((i=0; i<6; i++)) ; do
+        # printf "%d,%d,%d\n" $((r1 + i*(r2 - r1)/5 )) \
+        #                     $((g1 + i*(g2 - g1)/5 )) \
+        #                     $((b1 + i*(b2 - b1)/5 )) >&2
+
+        display-rgb-code $((r1 + i*(r2 - r1)/5 )) \
+                         $((g1 + i*(g2 - g1)/5 )) \
+                         $((b1 + i*(b2 - b1)/5 ))
+    done
+    printf "\n"
+}
+
+code-to-rgb(){
+    local code=$1
+    local x=$((code-16))
+    local r=$(( (x/${pow_6[red]})   % 6 ))
+    local g=$(( (x/${pow_6[green]}) % 6 ))
+    local b=$(( (x/${pow_6[blue]})  % 6 ))
+    echo $r $g $b
+}
+
+rgb-to-code(){
+    local r=$1 g=$2 b=$3
+    echo $((16 + $r*${pow_6[red]} + $g*${pow_6[green]} + $b*${pow_6[blue]}))
+}
+
+display-line-code(){
+    local c1=${1##0}
+    local c2=${2##0}
+
+    local d1=( $(code-to-rgb $c1) )
+    local d2=( $(code-to-rgb $c2) )
+
+    display-line-rgb ${d1[0]} ${d1[1]} ${d1[2]} \
+                     ${d2[0]} ${d2[1]} ${d2[2]}
+}
+
+
+# main "$@"
+# display-line-rgb 0 0 0 0 0 5
+# # code-to-rgb 46
+# # code-to-rgb 21
+# # code-to-rgb 160
 
 main "$@"
