@@ -4,17 +4,20 @@ import sys
 import re
 import argparse
 
-ansi = re.compile(r'\x1b\[[0-7;]*m')
-color_index = 57
+ansi_re = re.compile(r'\x1b\[[0-9;]*m')
+color_index = 20
 token_colors = {}
 def get_args():
     p = argparse.ArgumentParser()
-    p.add_argument("-f", "--field", type=int, help="Field number", required=True)
+    p.add_argument("-f", "--field", type=str, help="Field number", required=True)
     p.add_argument("-d", "--delim", type=str, help="Delimiter (default is ' ')", default=" ")
     p.add_argument("-a", "--also", type=str)
     p.add_argument("--all", action='store_true', help="Color whole line instead of just the given field")
     p.add_argument("--header", type=int, default=0, help="Start coloring at line N")
     return p.parse_args()
+
+def unansi(s):
+    return ansi_re.sub('', s)
 
 def next_color():
     global color_index
@@ -24,72 +27,91 @@ def next_color():
     return color_index
 
 def split_including_delim(string, delim=' '):
+    # Split a string while preserving delimiters to preserve alignment
     words = []
     word = ""
     ic = iter(string)
     try:
+        # Delimiters before the first word become part of the first word.
         while True:
             c = next(ic)
             word += c
-            if c == delim:
-                # Consume delimiters until we find the first char of the next
-                # word.
-                while True:
-                    c = next(ic)
-                    if c != delim:
-                        words.append(word)
-                        word = c
-                        break
-                    else:
-                        word += c
+            if c != delim:
+                break
+        while True:
+            # Consume characters into word until we find a delimiter
+            while True:
+                c = next(ic)
+                word += c
+                if c == delim:
+                    break
+            # Consume delimiters into word until we find a non-delimiter
+            while True:
+                c = next(ic)
+                if c == delim:
+                    word += c
+                else:
+                    words.append(word)
+                    word = c
+                    break
     except StopIteration:
         words.append(word)
+
     return words
 
 def main():
     lineno = 0
     args = get_args()
+    if args.field.endswith('+'):
+        field = int(args.field[:-1])
+    else:
+        field = int(args.field)
     for l in sys.stdin:
         lineno += 1
+
         if lineno <= args.header:
             print(l, end='')
             continue
-        if True:
-            words = l.strip().split(args.delim)
+        if False:
+            words = l.rstrip().split(args.delim)
         else:
-            words = split_including_delim(l.strip(), args.delim)
+            words = split_including_delim(l.rstrip(), args.delim)
 
-        if len(words) <= args.field:
-            print(l.strip())
-            # print("lineno #{lineno} only has {len(words)} fields")
+        if len(words) <= field:
+            print(l.rstrip())
             continue
 
-        h = ansi.sub('', words[args.field])
+        # Get color according to words[field]
+        h = unansi(words[field])
         if h in token_colors:
             color = token_colors[h]
         else:
             color = next_color()
             token_colors[h] = color
 
+        # If --all, color the whole string and we're done
         if args.all:
-            print(f"\033[38;5;{color}m{l.strip()}\033[0m")
-        else:
-            words[args.field] = f"\033[38;5;{color}m{h}\033[0m"
-            if args.also:
-                if args.also.endswith('+'):
-                    n = int(args.also[:-1])
-                    trail = ''.join(words[n:])
-                    trail = ansi.sub('', trail)
-                    words = words[:n]
-                    color_trail=f"\033[38;5;{color}m{trail}\033[0m"
-                    words.append(color_trail)
-                else:
-                    if len(words) <= args.also:
-                        words[int(args.also)] = f"\033[38;5;{color}m{words[int(args.also)]}\033[0m"
-            if True:
-                print(args.delim.join(words))
+            print(f"\033[38;5;{color}m{l.rstrip()}\033[0m")
+            continue
+
+        # Replace word #field with colored
+        words[field] = f"\033[38;5;{color}m{h}\033[0m"
+
+        # If args.field
+        if args.field.endswith('+'):
+            words = [*words[:field+1], f"\033[38;5;{color}m{' '.join(words[field+1:])}\033[0m"]
+
+        # Color another field with the same color
+        if args.also:
+            if args.also.endswith('+'):
+                also = int(args.also[:-1])
+                words = [*words[:args.also], f"\033[38;5;{color}m{' '.join(words[args.also:])}\033[0m"]
             else:
-                print(''.join(words))
+                also = int(args.also)
+                if also <= len(words):
+                    words[also] = f"\033[38;5;{color}m{words[also]}\033[0m"
+
+        print(''.join(words))
 
 if __name__ == "__main__":
     sys.exit(main())
