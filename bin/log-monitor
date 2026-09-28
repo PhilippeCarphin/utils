@@ -44,16 +44,19 @@ get-files(){
     # without double-stat'ing.
     # - I don't know how to make 'ls' only give regular files
     # - I don't know how to make find sort its output by time
-    cmd=(find . -mindepth 1 -maxdepth 1 -type f)
-    if [[ -n $1 ]] ; then
-        cmd+=(-name "$1")
-    fi
-    "${cmd[@]}" | xargs ls -t
+    local GLOBSORT=-ctime
+    for f in ${1:-.*} ; do
+        if ! [[ -f $f ]] ; then
+            continue
+        fi
+        files+=("$f")
+    done
 }
 
 prev_nb_files=0
 while true ; do
-    files=($(get-files $glob))
+    files=()
+    get-files "$1"
     nb_files=${#files[@]}
     if (( nb_files > prev_nb_files )) ; then
         debug "New file detected"
