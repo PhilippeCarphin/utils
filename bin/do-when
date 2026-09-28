@@ -3,6 +3,7 @@
 import argparse
 import time
 import subprocess
+import sys
 
 p = argparse.ArgumentParser()
 p.add_argument('--when', dest="test", help="Test", required=True)
@@ -13,9 +14,13 @@ args = p.parse_args()
 print(f"Condition: '{args.test}'")
 print(f"Command when condition succeeds: '{args.do}'")
 
-while True:
-    if subprocess.run(args.test, shell=True).returncode == 0:
-        break
-    time.sleep(args.check_interval)
+try:
+    while True:
+        if subprocess.run(args.test, shell=True).returncode == 0:
+            break
+        time.sleep(args.check_interval)
 
-subprocess.run(args.do, shell=True)
+    subprocess.run(args.do, shell=True)
+except KeyboardInterrupt:
+    print()
+    sys.exit(130)
