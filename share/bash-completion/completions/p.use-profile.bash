@@ -1,5 +1,47 @@
 #!/bin/bash # Editor hint
 
+#
+# Quasi-copy of the function that currently resides only in my tests repo in
+# BASH_tests/completion/_tilde.sh
+#
+_usernames(){
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    #
+    # Create parallel arrays of users and full names while also finding the
+    # longest user and eliminating "deactivated" users.
+    #
+    local max_user=0 users=() fullnames=() user name home shell
+    while IFS=: read user _ _ _ name home shell ; do
+        if [[ ${shell} == /bin/false ]] ; then
+            continue
+        fi
+        if ((${#user} > max_user)) ; then
+            max_user=${#user}
+        fi
+        users+=("$user")
+        fullnames+=("$name")
+    done < <(compgen -u ${cur} | xargs getent passwd)
+    max_user=$((max_user+1)) # for the `~` that we are adding back
+
+    #
+    # Inject descriptions into COMPREPLY except if there is only one result
+    # (otherwise the description will also be added to the command line)
+    #
+    if ((${#users[@]} > 1)) ; then
+        for ((i=0;i<${#users[@]};i++)) ; do
+            local comp
+            printf -v comp "%-${max_user}s (%s)" "${users[i]}" "${fullnames[i]//\//-}"
+            COMPREPLY+=("${comp}")
+        done
+    else
+        for u in "${users[@]}" ; do
+            COMPREPLY+=("$u")
+        done
+    fi
+
+    return $((${#COMPREPLY[@]} == 0))
+}
+
 _p.use-profile(){
     local cur prev cword words
     _init_completion || return 1
@@ -16,10 +58,8 @@ _p.use-profile(){
         esac
     done
     # echo "complete_user=${complete_user}, complete_options=${complete_options}"
-    COMPREPLY=(
-        $(${complete_options} && compgen -W "--no-adapt-ps1 -d --debug -x --help -h" -- "${cur}")
-        $(${complete_user} && compgen -u -- "${cur}")
-    )
+    COMPREPLY=($(${complete_options} && compgen -W "--no-adapt-ps1 -d --debug -x --help -h" -- "${cur}"))
+    _usernames
 }
 
 
