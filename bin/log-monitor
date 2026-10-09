@@ -6,9 +6,8 @@ trap 'cleanup' EXIT
 cleanup(){
 
     if [[ -n ${tail_pid} ]] ; then
-        ps -f ${tail_pid}
         debug "Killing tail process ${tail_pid}"
-        kill -- -${tail_pid}
+        kill -- ${tail_pid}
         debug "Waiting for tail process to finish"
         wait
         debug "Tail process ended"
@@ -79,15 +78,7 @@ while true ; do
         # Note: Need to reopen dev/tty because the program is goin in
         # background and without this, the `stty` in short-tail would
         # fail with `stty: 'standard input': Inappropriate ioctl for device`
-        # ${tail} ${files[0]} </dev/tty &
-        #
-        # Using setsid, we start the tail process in its own session and
-        # therefore its own process group.  This allows us to kill the whole
-        # process group using `kill -- -${pid_of_group_leader}`
-        #
-        # This is something that the short-tail and tail-with-header programs
-        # should handle.
-        setsid --wait ${tail} ${files[0]} &
+        ${tail} ${files[0]} </dev/tty &
         tail_pid=$!
     fi
     sleep ${poll_seconds}
