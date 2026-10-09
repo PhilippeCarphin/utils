@@ -31,6 +31,8 @@ row=${pos%;*}
 
 # Set scroll region and reset on exit
 printf "\e7\e[${row};$((row+SIZE))r\e8" >&2
-trap 'printf "\e7\e[r\e8" >&2' EXIT
+trap 'if [[ -n ${tail_pid} ]] ; then kill ${tail_pid} ; wait ; fi ; printf "\e7\e[r\e8" >&2' EXIT
 
-tail -f $1 >&2
+tail -f $1 >&2 &
+tail_pid=$!
+wait
