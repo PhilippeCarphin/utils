@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+for((i=0;i<$#;i++)); do
+    printf "arg[%d]=%q\n" "${!i}"
+done
