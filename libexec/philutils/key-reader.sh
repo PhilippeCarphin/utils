@@ -47,9 +47,6 @@ declare -gA key_map=(
 printf "Waiting for key presses ...\n"
 while read -s -N 1 byte ; do
     case "$byte" in
-        $'\003')
-            read -p "C-c pressed: quit? y/n > " answer
-            if [[ ${answer} == y* ]] ; then kill -INT $$ ; fi ;;
         $'\e')
             read -r -s -t 0.1 -n 2 bytes_after_esc || true
             case "$bytes_after_esc" in
@@ -66,5 +63,9 @@ while read -s -N 1 byte ; do
             else
                 printf "byte:%q\n" "$byte"
             fi
+            ;;&
+        $'\003')
+            read -p "C-c pressed: quit? y/n > " answer
+            if [[ ${answer} == y* ]] ; then kill -INT $$ ; fi ;;
     esac
 done
