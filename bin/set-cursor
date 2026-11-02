@@ -1,0 +1,33 @@
+#!/usr/bin/env -S bash -o errexit -o nounset -o errtrace -o pipefail -O inherit_errexit -O nullglob -O extglob
+case $1 in -h|--help)
+    cat <<-EOF
+		usage:
+		    $0 COLOR [bar|box]
+		    $0
+		Change the color and shape of the cursor.
+		- No arguments sets it to default.
+		- COLOR is a textual color name like "red".
+	EOF
+    exit 0
+esac
+
+color=${1:-}
+shape=${2:-}
+
+case $color in
+    '') printf -v set_color "\033]112\007" ;;
+    *) printf -v set_color "\033]12;%s\007" "${color}" ;;
+esac
+
+case $shape in
+    bbox) printf -v set_shape "\033[1 q" ;;
+    box) printf -v set_shape "\033[2 q" ;;
+    bline) printf -v set_shape "\033[3 q" ;;
+    line) printf -v set_shape "\033[4 q" ;;
+    bbar) printf -v set_shape "\033[5 q" ;;
+    bar) printf -v set_shape "\033[6 q" ;;
+    '') printf -v set_shape "\033[0 q" ;;
+esac
+
+printf 'printing %q\n' "${set_color}${set_shape}"
+printf '%s' "${set_color}${set_shape}"
