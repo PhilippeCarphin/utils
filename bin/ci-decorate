@@ -9,7 +9,7 @@ main(){
             '#'*) printf "printf '%s' '$(escape "${line}")'\n" \
                 "\033[34m%s\033[0m\n" ;;
             *) printf 'printf "%s" "${ps1@P}" "%s"; %s\n' \
-                "\033[1;32m%s %s\033[0m\n" \
+                "\033[1;32m%s%s\033[0m\n" \
                 "$(escape "${line}")" \
                 "${line}"
         esac
