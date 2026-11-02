@@ -127,6 +127,8 @@ id(){
 vc_file=$(shopt -s extdebug ; declare -F vc | awk '{print $3}')
 for f in $HOME/.profile ${vc_file} ; do
     if [[ -f $f ]] ; then
+        export TMPDIR=$ORIGINAL_HOME/tmp/p.use-profile/$USER
+        mkdir -p $TMPDIR
         source $f
     fi
 done
