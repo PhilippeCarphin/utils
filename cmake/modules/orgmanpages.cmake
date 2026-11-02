@@ -65,5 +65,5 @@ macro(orgmanpages_add_man_target)
 
         add_dependencies(man ${target_base})
     endforeach()
-    install(DIRECTORY ${CMAKE_BINARY_DIR}/share DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/share/man/ DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man)
 endmacro()

@@ -32,9 +32,17 @@ endif()
 include(CTest)
 add_custom_target(check COMMAND CTEST_OUTPUT_ON_FAILURE=true ${CMAKE_CTEST_COMMAND})
 
+set(bash_comp_dir share/bash-completion/completions)
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/${bash_comp_dir}/echo-server.bash
+    COMMAND mkdir -p ${CMAKE_BINARY_DIR}/${bash_comp_dir}
+    COMMAND bash -c \"GENERATE_COMPLETION=1 python3 ${CMAKE_SOURCE_DIR}/bin/echo-server > ${CMAKE_BINARY_DIR}/${bash_comp_dir}/echo-server.bash \"
+)
+add_custom_target(echo-server-compfile ALL DEPENDS share/bash-completion/completions/echo-server.bash)
+
 include(orgmanpages)
 orgmanpages_add_man_target()
 install(DIRECTORY bin/ DESTINATION bin USE_SOURCE_PERMISSIONS PATTERN *.swp EXCLUDE)
 install(DIRECTORY libexec/philutils DESTINATION libexec USE_SOURCE_PERMISSIONS PATTERN *.swp EXCLUDE)
 install(DIRECTORY etc/ DESTINATION etc USE_SOURCE_PERMISSIONS PATTERN *.swp EXCLUDE)
 install(DIRECTORY share/bash-completion/completions/ DESTINATION share/bash-completion/completions PATTERN *.swp EXCLUDE)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/share/bash-completion/completions/ DESTINATION share/bash-completion/completions PATTERN *.swp EXCLUDE)

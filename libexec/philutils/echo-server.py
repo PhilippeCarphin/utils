@@ -11,6 +11,7 @@ import requests
 import subprocess
 import sys
 import urllib
+import os
 
 DESCRIPTION="Launch a server that prints out POST requests it receives"
 
@@ -24,6 +25,12 @@ def get_args():
     p.add_argument("--debug", action='store_true')
     p.add_argument("--cert")
     p.add_argument("--key")
+
+    if 'GENERATE_COMPLETION' in os.environ:
+        import compgen
+        compgen.completion_from_parser(p, 'echo_server', ['echo-server'])
+        sys.exit(0)
+
     args = p.parse_args()
     if args.allowed_origins:
         args.allowed_origins = args.allowed_origins.split(",")
