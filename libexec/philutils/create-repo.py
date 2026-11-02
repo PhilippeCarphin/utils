@@ -1,46 +1,35 @@
 #!/usr/bin/python3
 import json
 import os
-import sys
+import argparse
 import subprocess
 import pprint
+import sys
 
-if len(sys.argv) < 2:
-    name = os.path.basename(os.getcwd())
-else:
-    name = sys.argv[1]
+def get_parser():
+    p = argparse.ArgumentParser()
+    p.add_argument("name", default=os.path.basename(os.getcwd()))
+    return p
 
-message_ = {
-        "name": name,
-        }
+args = get_parser().parse_args()
 
-message = json.dumps(message_)
+if not os.path.isfile(os.path.expanduser('~/.ssh/tokens/github_token.txt')):
+    print(f"ERROR: A github access token must be present as a single line in ~/.ssh/tokens/github_token.txt")
+    sys.exit(1)
+
+token = open(os.path.expanduser('~/.ssh/tokens/github_token.txt')).read()
 
 # https://developer.github.com/v3/repos/#create
-with open(os.path.expanduser('~/.ssh/tokens/github_token.txt'), 'r') as f:
-    token = f.read()
+resp = requests.post(
+    'https://api.github.com/user/repos',
+    headers={'Authorization': f'token {token}'},
+    json={'name', args.name}
+)
 
-curl_cmd = ['curl', '-X', 'POST', '-H', f'Authorization: token {token}', '-d', message, 'https://api.github.com/user/repos']
-
-print(f'curl_cmd = {curl_cmd}')
-
-def request_successful(response):
-    if 'errors' in response:
-        return False
-    if 'message' in response:
-        # Some responses for failures don't have an 'errors' attribute
-        return False
-    return 'url' in response
-
-response = json.loads(subprocess.check_output(curl_cmd))
-if not request_successful(response):
-    print("Unable to create repository")
-    pprint.pprint(response)
-    quit(1)
-else:
-    print(f"Repo '{response['clone-url']}' created")
+if resp.status_code != 200:
+    print(f"POST request failed")
+    sys.exit(1)
 
 cmd = ['git', 'remote', 'add', 'origin', response['clone_url']]
 print(f"Adding repo: {' '.join(cmd)}")
 subprocess.call(cmd)
-# subprocess.call(['git', 'push', '-u', 'origin', 'master'])
