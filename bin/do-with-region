@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+SCROLL_SIZE=10
+VERBOSE=0
+
+usage(){
+    cat <<-EOF
+		USAGE:
+
+		    ${0##*/} [-s SCROLL_SIZE] CMD...
+
+		Run CMD with scroll region of SCROLL_SIZE lines (default is $SCROLL_SIZE)
+	EOF
+}
+
+do-with-region(){
+    SCROLL_SIZE=8
+    VERBOSE=0
+while getopts "hs:v" opt ; do
+    case ${opt} in
+        s) SCROLL_SIZE=${OPTARG} ;;
+        v) VERBOSE=1 ;;
+        h) usage ; exit 0 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+# Print SCROLL_SIZE lines to make space, then move cursor back up
+# SCROLL_SIZE lines to get it back to where it was
+printf -v spaces "%${SCROLL_SIZE}s"
+printf "%s" "${spaces//?/$'\n'}" >&2
+printf "\033[${SCROLL_SIZE}A"
+
+#
+# Get cursor position needed to set the scroll region
+# After receiving \033[6n, the terminal emulator will send us
+# our cursor position on /dev/tty in the form \033[<ROW>;<COL>R
+#
+# - Read from /dev/tty in case STDIN is input meant for CMD
+# - Turn off echoing of characters because sometimes (maybe some kind of race)
+#   we see the '[x;yR' on the terminal
+#
+local stty_settings=$(stty -g)
+stty -echo
+printf "\033[6n" >&2
+read -s -d R response </dev/tty
+pos=${response#*'['}
+row=${pos%;*}
+stty "${stty_settings}"
+
+# Set scroll region to $((row)) $((SCROLL_SIZE-1)):ta
+# \e7 ... \e8 is save ... restore cursor position
+# \e[<START>;<END>r sets the scroll region
+printf "\e7\e[${row};$((row + SCROLL_SIZE - 1))r\e8" >&2
+
+# Ensure scroll region is reset if program exits normally or abnormally
+trap 'printf "\e7\e[r\e8" >&2' EXIT
+
+"$@"
